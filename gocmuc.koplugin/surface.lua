@@ -63,6 +63,19 @@ local icons = {
         {10,7,14,7,17,10,17,14,14,17,10,17,7,14,7,10,10,7}},
     help={{12,3,18,5,21,11,19,18,13,21,6,19,3,13,5,6,12,3},{12,7,12,7},{12,11,12,17}},
     exit={{12,3,5,3,5,21,12,21},{9,12,21,12},{17,8,21,12,17,16}},
+    health={{5,8,7,4,10,4,12,6,14,4,17,4,19,8,12,20,5,8}},
+    sun={{12,4,15,5,17,7,18,10,18,14,17,17,15,19,12,20,9,19,7,17,6,14,6,10,7,7,9,5,12,4},
+        {12,12,12,12},{3,3,5,5},{21,3,19,5},{3,21,5,19},{21,21,19,19}},
+    rain={{4,17,20,17,22,14,20,11,17,11,16,7,12,5,8,6,6,10,3,10,2,14,4,17},
+        {8,19,8,21},{12,19,12,21},{16,19,16,21}},
+    storm={{4,17,20,17,22,14,20,11,17,11,16,7,12,5,8,6,6,10,3,10,2,14,4,17},
+        {14,17,10,21,13,21,11,23}},
+    snow={{4,17,20,17,22,14,20,11,17,11,16,7,12,5,8,6,6,10,3,10,2,14,4,17},
+        {7,19,9,21},{9,19,7,21},{12,20,12,20},{16,19,18,21},{18,19,16,21}},
+    fog={{4,17,20,17,22,14,20,11,17,11,16,7,12,5,8,6,6,10,3,10,2,14,4,17},
+        {6,19,18,19},{8,21,16,21}},
+    trend_up={{4,18,10,12,14,15,20,6},{20,6,20,12},{20,6,14,6}},
+    trend_down={{4,6,10,12,14,9,20,18},{20,18,20,12},{20,18,14,18}},
 }
 
 local function drawIcon(bb, name, x, y, size)
@@ -108,6 +121,57 @@ end
 
 function Surface:drawGlyph(bb,name,x,y,size)
     drawIcon(bb,icons[name] and name or "arrow",x,y,size)
+end
+
+-- Hình đồ họa vẽ thẳng lên framebuffer (chỉ đen/trắng/xám cho màn e-ink):
+-- thanh tiến trình ngang, biểu đồ cột đứng và thanh khoảng min-max.
+function Surface:bar(x,y,w,h,fraction)
+    self.shapes[#self.shapes+1]={kind="bar",x=x,y=y,w=w,h=h,
+        fraction=math.max(0,math.min(1,fraction or 0))}
+end
+
+function Surface:columnChart(x,y,w,h,values)
+    self.shapes[#self.shapes+1]={kind="columns",x=x,y=y,w=w,h=h,values=values}
+end
+
+function Surface:rangeBar(x,y,w,h,lo,hi,mark)
+    self.shapes[#self.shapes+1]={kind="range",x=x,y=y,w=w,h=h,
+        lo=math.max(0,math.min(1,lo or 0)),hi=math.max(0,math.min(1,hi or 0)),
+        mark=mark and math.max(0,math.min(1,mark)) or nil}
+end
+
+function Surface:paintShapes(bb,x,y)
+    for _,shape in ipairs(self.shapes) do
+        local sx,sy=x+shape.x,y+shape.y
+        if shape.kind=="bar" then
+            bb:paintRect(sx,sy,shape.w,shape.h,BB.COLOR_GRAY_E)
+            local fill_w=floor(shape.w*shape.fraction)
+            if fill_w>0 then bb:paintRect(sx,sy,fill_w,shape.h,BB.COLOR_BLACK) end
+            bb:paintBorder(sx,sy,shape.w,shape.h,self.stroke,BB.COLOR_BLACK,0,true)
+        elseif shape.kind=="columns" then
+            local values=shape.values
+            local n=#values
+            if n>0 then
+                local col_w=floor((shape.w-(n-1)*self.gap)/n)
+                for i,v in ipairs(values) do
+                    local col_h=floor(shape.h*math.max(0,math.min(1,v or 0)))
+                    local cx=sx+(i-1)*(col_w+self.gap)
+                    if col_h>0 then bb:paintRect(cx,sy+shape.h-col_h,col_w,col_h,BB.COLOR_BLACK) end
+                end
+                bb:paintRect(sx,sy+shape.h-1,shape.w,1,BB.COLOR_BLACK)
+            end
+        elseif shape.kind=="range" then
+            bb:paintRect(sx,sy,shape.w,shape.h,BB.COLOR_GRAY_E)
+            local x0=floor(shape.w*shape.lo)
+            local x1=floor(shape.w*shape.hi)
+            if x1>x0 then bb:paintRect(sx+x0,sy,x1-x0,shape.h,BB.COLOR_BLACK) end
+            if shape.mark then
+                local mx=sx+floor(shape.w*shape.mark)
+                bb:paintRect(mx-1,sy-2,3,shape.h+4,BB.COLOR_BLACK)
+            end
+            bb:paintBorder(sx,sy,shape.w,shape.h,self.stroke,BB.COLOR_BLACK,0,true)
+        end
+    end
 end
 
 function Surface:paintLabels(bb,x,y)
@@ -187,7 +251,7 @@ end
 
 function Surface:init()
     self.dimen=Geom:new{w=Screen:getWidth(),h=Screen:getHeight()}
-    self.labels,self.targets,self.cards,self.glyphs={},{},{},{}
+    self.labels,self.targets,self.cards,self.glyphs,self.shapes={},{},{},{},{}
     local unit=math.min(self.dimen.w,self.dimen.h)
     self.margin=floor(unit*0.048)
     self.gap=math.max(3,floor(unit*0.018))
@@ -218,6 +282,7 @@ function Surface:paintTo(bb,x,y)
         end
     end
     for _,glyph in ipairs(self.glyphs) do self:drawGlyph(bb,glyph.icon,x+glyph.x,y+glyph.y,glyph.size) end
+    self:paintShapes(bb,x,y)
     self:paintLabels(bb,x,y)
 end
 

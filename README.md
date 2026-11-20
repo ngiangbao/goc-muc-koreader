@@ -38,18 +38,18 @@ Từ **Góc Mực → Cập nhật → Kiểm tra Góc Mực**, plugin kiểm tr
 
 | Mục | Tính năng |
 | --- | --- |
-| Toán tư duy | Năm cấp lớp, luyện 10 câu, đề mô phỏng Kangaroo 24 câu và ASMO 25 câu, hẹn giờ, điểm 3–4–5, câu hỏi ngẫu nhiên và lời giải Việt–Anh. Kangaroo trừ ¼ điểm của câu chọn sai. |
+| Toán tư duy | Năm cấp lớp, luyện 10 câu, đề mô phỏng Kangaroo 24 câu và ASMO 25 câu, hẹn giờ, điểm 3–4–5, câu hỏi ngẫu nhiên và lời giải Việt–Anh. Kangaroo trừ ¼ điểm của câu chọn sai. Màn kết quả có thanh điểm theo số câu đúng. |
 | Cờ caro | Bàn 13 × 13, thắng khi có ít nhất năm quân liên tiếp còn đầu mở, năm mức đối thủ, hai người chung máy, phòng qua Wi-Fi. |
 | Đọc báo | Sáu ô nguồn báo, danh sách tin và màn đọc toàn màn hình. Ưu tiên nguồn RSS tòa soạn, dùng Google Tin tức khi cần. Có bản tóm tắt, nút trước/sau và hỗ trợ nút cứng trên thiết bị có phím khi đến rìa trang. Nội dung đầy đủ phụ thuộc vào trang bài viết. |
-| Lịch để bàn | Màn xem ngày và xem tháng toàn màn hình, ngày âm dương, giờ hoàng đạo dân gian, thời tiết hiện tại và dự báo bốn ngày, giá vàng SJC. Mặc định thời tiết là TP Hồ Chí Minh. |
+| Lịch để bàn | Màn xem ngày và xem tháng toàn màn hình, ngày âm dương, giờ hoàng đạo dân gian, thời tiết hiện tại và dự báo bốn ngày, giá vàng SJC. Mặc định thời tiết là TP Hồ Chí Minh. Thời tiết hiện bằng icon, nhiệt độ lớn, thanh khoảng nhiệt độ trong ngày và biểu đồ cột 4 ngày; giá vàng hiện bằng hai thanh so sánh mua/bán kèm mũi tên tăng giảm so với lần đo trước. |
 | Bé đọc | Bộ mẫu truyện kể lại, ca dao, tục ngữ và câu đố. |
-| 15 tiện ích | Việc cần làm, thói quen, tập trung, từ vựng, Sudoku, ghi chú, bấm giờ, đếm ngược, đổi đơn vị, máy tính, xúc xắc, đồng xu, bốc số, thẻ tự tạo và nước uống. |
+| 15 tiện ích | Việc cần làm, thói quen, tập trung, từ vựng, Sudoku, ghi chú, bấm giờ, đếm ngược, đổi đơn vị, máy tính, xúc xắc, đồng xu, bốc số, thẻ tự tạo và nước uống. Danh sách việc/thói quen có thanh hoàn thành; thói quen và nước uống có biểu đồ cột 7 ngày; đồng hồ tập trung và đếm ngược có thanh thời gian còn lại; xúc xắc hiện mặt số lớn trong lưới ô vuông; thẻ ôn có thanh tiến độ. |
 
 Các đề toán do plugin sinh để luyện. Bản đầu có minh họa bằng ký hiệu và sơ đồ chữ. Báo, giá vàng và thời tiết dùng Wi-Fi. Giá vàng theo dữ liệu của Vang.today và hiển thị mốc thời gian của nguồn.
 
 ## Nhắn Muse qua Tailscale
 
-Ô **Muse** gửi văn bản vào chat phụ qua **Muse Gadget SDK chính thức** và hiển thị câu trả lời trên Kindle. Kindle kết nối qua Tailscale tới cầu nối đi kèm, chạy trên máy Linux như Raspberry Pi. Máy Linux phải có Node.js 20+, Tailscale và Muse Gadget SDK đã ghép với ứng dụng Muse trên điện thoại. Hai thiết bị cần cùng tailnet và được quyền truy cập cổng của cầu nối. [Hướng dẫn ghép Muse Gadget SDK](https://github.com/facebookincubator/muse-gadget-sdk/tree/main/linux)
+Ô **Muse** gửi văn bản vào chat phụ qua **Muse Gadget SDK chính thức** và hiển thị câu trả lời trên Kindle. Ô **Sức khỏe** trong cùng menu gửi sẵn câu hỏi tổng hợp Apple Health (giấc ngủ, nhịp tim nghỉ, số bước chân, SpO2 và lưu ý bất thường) rồi hiển thị câu trả lời của Muse. Kindle kết nối qua Tailscale tới cầu nối đi kèm, chạy trên máy Linux như Raspberry Pi. Máy Linux phải có Node.js 20+, Tailscale và Muse Gadget SDK đã ghép với ứng dụng Muse trên điện thoại. Hai thiết bị cần cùng tailnet và được quyền truy cập cổng của cầu nối. [Hướng dẫn ghép Muse Gadget SDK](https://github.com/facebookincubator/muse-gadget-sdk/tree/main/linux)
 
 Trên máy Linux đã ghép, chạy các lệnh sau bằng tài khoản dùng được `musegadget send-user-msg`. Cổng mặc định là 8091.
 

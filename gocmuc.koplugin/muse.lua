@@ -1,6 +1,8 @@
 return function(App,env)
 local Net=dofile(env.root.."/net.lua")
 local UI=env.UI
+local HEALTH_PROMPT="Tổng hợp thông tin Apple Health mới nhất của tôi: giấc ngủ, nhịp tim nghỉ, "
+    .."số bước chân, SpO2, và lưu ý bất thường nếu có. Trả lời ngắn gọn bằng tiếng Việt."
 local function bridgeURL(input)
     local a,b,c,d,port=input:match("^http://(%d+)%.(%d+)%.(%d+)%.(%d+):(%d+)/?$")
     if a~="100" or #b>3 or #c>3 or #d>3 or #port>5 then return end
@@ -15,6 +17,7 @@ function App:museMenu()
         {"Soạn tin nhắn",function() self:museCompose() end,"muse"},
         {"Kiểm tra kết nối",function() self:musePing() end,"link"},
         {"Thiết lập cầu nối",function() self:museSetup() end,"tools"},
+        {"Sức khỏe",function() self:museHealth() end,"health"},
     }
     if self.muse_job then
         table.insert(entries,2,{"Xem tin nhắn gần nhất",function() self:museReply(self.muse_job) end,"book"})
@@ -63,15 +66,26 @@ function App:museCompose()
     if not self:read("muse_bridge") then self:museSetup(); return end
     self:prompt("Nhắn Muse","Tin nhắn sẽ được gửi vào chat phụ Muse của cầu nối.", "",function(prompt)
         if #prompt==0 or #prompt>4000 then self:notice("Nhập tin nhắn dài tối đa 4.000 byte."); return end
-        self:museRequest("jobs",{message=prompt},function(data)
-            if type(data.id)~="string" or #data.id~=36 or data.id:find("[^a-f0-9-]") then
-                self:notice("Cầu nối trả mã tin nhắn không hợp lệ.")
-                return
-            end
-            self.muse_job={id=data.id,prompt=prompt,started=os.time()}
-            self:museReply(self.muse_job)
-        end)
+        self:museStartJob(prompt)
     end,{multiline=true,action="Gửi"})
+end
+
+-- Gửi một câu hỏi qua đúng luồng cầu nối của ô Muse: tạo job rồi xem trả lời.
+function App:museStartJob(prompt)
+    self:museRequest("jobs",{message=prompt},function(data)
+        if type(data.id)~="string" or #data.id~=36 or data.id:find("[^a-f0-9-]") then
+            self:notice("Cầu nối trả mã tin nhắn không hợp lệ.")
+            return
+        end
+        self.muse_job={id=data.id,prompt=prompt,started=os.time()}
+        self:museReply(self.muse_job)
+    end)
+end
+
+-- Ô Sức khỏe: hỏi Muse tổng hợp Apple Health rồi hiển thị như ô Muse.
+function App:museHealth()
+    if not self:read("muse_bridge") then self:museSetup(); return end
+    self:museStartJob(HEALTH_PROMPT)
 end
 
 function App:museReply(job,result)

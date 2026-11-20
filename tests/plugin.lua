@@ -59,11 +59,33 @@ local package_modules={
     ["ltn12"]={source={string=function(v) return v end}},
     ["socketutil"]={set_timeout=function() end},
     ["socket.http"]={request=function(opts)
-        opts.sink("<rss><channel><item><title>A &amp; B</title><link>https://example.com/a</link>"
+        if opts.url:find("/api/muse/",1,true) then
+            opts.sink('{"id":"123e4567-e89b-12d3-a456-426614174000","state":"done","answer":"Ngủ 5 giờ 30 phút."}')
+        elseif opts.url:find("api.open-meteo.com",1,true) then
+            opts.sink("weather_json")
+        elseif opts.url:find("vang.today",1,true) then
+            opts.sink("gold_json")
+        else
+            opts.sink("<rss><channel><item><title>A &amp; B</title><link>https://example.com/a</link>"
             .."<description><![CDATA[<p>Some notes</p>]]></description></item></channel></rss>")
+        end
         return 1,200
     end},
-    ["json"]={encode=function() return "{}" end,decode=function() return {} end},
+    ["json"]={encode=function() return "{}" end,decode=function(v)
+        if v=="weather_json" then
+            return {current={temperature_2m=28,weather_code=0},
+                daily={time={"2026-11-21","2026-11-22","2026-11-23","2026-11-24"},
+                    weather_code={1,2,61,0},temperature_2m_min={24,25,23,24},
+                    temperature_2m_max={31,32,29,30},precipitation_probability_max={10,20,80,0}}}
+        end
+        if v=="gold_json" then
+            return {success=true,buy=8500000,sell=8700000,time="10:30",date="21/11/2026"}
+        end
+        if v:find('"id"',1,true) then
+            return {id="123e4567-e89b-12d3-a456-426614174000",state="done",answer="Ngủ 5 giờ 30 phút."}
+        end
+        return {}
+    end},
 }
 for name,module in pairs(package_modules) do package.loaded[name]=module end
 
@@ -193,4 +215,64 @@ app.window.choices[3][2]()
 assert(shown.title=="Địa chỉ cầu nối Muse" and shown.fullscreen)
 shown.buttons[1][2].callback()
 assert(#app.window.tiles==18)
-print("KOReader widget mocks: 4 × 5 menus, matched text background, app exits, calendar, news and Muse passed.")
+
+-- Ô Sức khỏe: gửi câu hỏi cố định qua cầu nối rồi hiện câu trả lời.
+assert(app:blocks(0.6)=="■■■■■■□□□□")
+settings.muse_bridge="http://100.80.10.20:8091"
+settings.muse_bridge_key=string.rep("a",64)
+app:museMenu()
+assert(#app.window.tiles==4 and app.window.choices[4][1]=="Sức khỏe")
+app.window.choices[4][2]()
+assert(app.window.text:find("Muse đang xử lý",1,true))
+local poll=deferred[#deferred]
+assert(poll)
+poll()
+assert(app.window.text:find("Ngủ 5 giờ 30 phút",1,true))
+
+-- Thời tiết và giá vàng: trang đồ họa với icon, thanh khoảng và biểu đồ cột.
+app:weather()
+assert(labelFor(app.window,"28 °C"))
+assert(app.window.condition_icon=="sun")
+app.window:paintTo(bb,0,0)
+app:gold()
+assert(labelFor(app.window,"Mua vào") and labelFor(app.window,"Bán ra"))
+assert(labelFor(app.window,"Chưa có lần đo trước để so sánh."))
+app.window:paintTo(bb,0,0)
+app:gold()
+assert(labelFor(app.window,"Không đổi so với lần trước."))
+
+-- Thói quen 7 ngày: biểu đồ cột; nước uống: thanh tiến trình và biểu đồ 7 ngày.
+local today=os.date("%Y-%m-%d")
+local yesterday=os.date("%Y-%m-%d",os.time()-86400)
+settings.habits={{label="Uống nước",days={[today]=true,[yesterday]=true}}}
+settings.water={[today]=1500,[yesterday]=2000}
+app:habits()
+assert(app.window.subtitle:find("1/1",1,true))
+app.window.choices[2][2]()
+app.window.choices[3][2]()
+assert(#app.window.chart_columns==7)
+local done_days=0
+for _,col in ipairs(app.window.chart_columns) do if col.fraction==1 then done_days=done_days+1 end end
+assert(done_days==2)
+app.window:paintTo(bb,0,0)
+app:water()
+assert(app.window.progress==0.75)
+app.window.buttons[2][1].callback()
+assert(#app.window.chart_columns==7)
+app.window:paintTo(bb,0,0)
+
+-- Đồng hồ đếm ngược: thanh thời gian còn lại; xúc xắc: mặt số lớn trong lưới.
+app:timer("Kiểm tra",os.time()+900,function() end,900)
+assert(app.window.progress>0.99)
+app:dice()
+app.window.choices[1][2]()
+assert(app.window.buttons[1][1].text:match("^[1-6]$"))
+
+-- Kết quả toán: thanh điểm theo số câu đúng; thẻ ôn: thanh tiến độ.
+local Quiz=dofile(root.."/mathquiz.lua")
+local quiz=Quiz.new(1,"Luyện tập")
+app:mathResults(quiz)
+assert(app.window.subtitle:find("0/10 câu đúng",1,true))
+app:studyCard({{"book","quyển sách"}},1,false,"words")
+assert(app.window.text:find("■■■■■■■■■■",1,true))
+print("KOReader widget mocks: 4 × 5 menus, matched text background, app exits, calendar, news, Muse, health tile, graphic weather and gold, habit and water charts, timer progress and dice passed.")

@@ -20,6 +20,12 @@ function App:setList(key,title,kind)
     local items=self:read(key,{})
     local today=os.date("%Y-%m-%d")
     local function back() self:setList(key,title,kind) end
+    local done=0
+    for _,item in ipairs(items) do
+        if kind=="habit" then
+            if item.days[today] then done=done+1 end
+        elseif item.done then done=done+1 end
+    end
     local choices={{"+ Thêm",function()
         self:prompt("Thêm mục",nil,"",function(label)
             if label=="" then return end
@@ -43,16 +49,7 @@ function App:setList(key,title,kind)
                 end)
             end}}
             if kind=="habit" then
-                opts[#opts+1]={"Xem 7 ngày qua",function()
-                    local result={}
-                    local day=os.date("*t")
-                    for delta=0,6 do
-                        local ts=os.time{year=day.year,month=day.month,day=day.day-delta,hour=12}
-                        local date=os.date("%Y-%m-%d",ts)
-                        result[#result+1]=(item.days[date] and "✓ " or "○ ")..date
-                    end
-                    self:view(item.label,table.concat(result,"\n"),back)
-                end}
+                opts[#opts+1]={"Xem 7 ngày qua",function() self:habitWeek(item,back) end}
             end
             opts[#opts+1]={"Xóa mục",function()
                 self:menu("Xóa «"..item.label.."»?",{{"Xóa",function()
@@ -64,7 +61,25 @@ function App:setList(key,title,kind)
             self:menu(item.label,opts,back)
         end}
     end
-    self:menu(title,choices,function() self:utilities() end)
+    self:menu(title,choices,function() self:utilities() end,
+        {subtitle=#items>0 and done.."/"..#items.." xong · "..self:blocks(done/#items) or nil})
+end
+
+function App:habitWeek(item,back)
+    local day=os.date("*t")
+    local columns={}
+    for delta=6,0,-1 do
+        local ts=os.time{year=day.year,month=day.month,day=day.day-delta,hour=12}
+        local date=os.date("%Y-%m-%d",ts)
+        local done=item.days[date] and true or false
+        columns[#columns+1]={label=os.date("%d/%m",ts),text=done and "✓" or "○",
+            fraction=done and 1 or 0}
+    end
+    self:openPage("Chart",{
+        title=item.label,subtitle="7 ngày qua · ✓ đã làm · ○ chưa làm",icon="calendar",
+        columns=columns,back=back,
+        redraw=function() self:habitWeek(item,back) end,
+    })
 end
 
 function App:todo() self:setList("todo","Việc cần làm","task") end
@@ -79,7 +94,7 @@ function App:focus()
     local choices={}
     for _,minutes in ipairs({15,25,45}) do
         choices[#choices+1]={minutes.." phút tập trung",function()
-            self:timer("Tập trung",os.time()+minutes*60,function() self:focusBreak() end)
+            self:timer("Tập trung",os.time()+minutes*60,function() self:focusBreak() end,minutes*60)
         end}
     end
     self:menu("Đồng hồ tập trung",choices,function() self:utilities() end)
@@ -87,7 +102,7 @@ end
 
 function App:focusBreak()
     self:menu("Đã xong phiên tập trung",{{"Nghỉ 5 phút",function()
-        self:timer("Nghỉ giải lao",os.time()+5*60,function() self:focus() end)
+        self:timer("Nghỉ giải lao",os.time()+5*60,function() self:focus() end,5*60)
     end}},function() self:focus() end)
 end
 
@@ -95,18 +110,20 @@ function App:countdown()
     self:prompt("Đếm ngược","Nhập số phút (0,1–180).","5",function(value)
         local n=tonumber((value:gsub(",",".")))
         if not n or n<0.1 or n>180 then self:notice("Thời lượng không hợp lệ."); return end
-        self:timer("Đếm ngược",os.time()+math.floor(n*60),function()
+        local total=math.floor(n*60)
+        self:timer("Đếm ngược",os.time()+total,function()
             self:utilities(); self:notice("Đã hết giờ.")
-        end)
+        end,total)
     end,{number=true,action="Bắt đầu"})
 end
 
-function App:timer(title,deadline,done)
+function App:timer(title,deadline,done,total)
     local remain=deadline-os.time()
     if remain<=0 then done(); return end
-    local function refresh() self:timer(title,deadline,done) end
+    local function refresh() self:timer(title,deadline,done,total) end
+    local progress=total and total>0 and remain/total or nil
     local window=self:show(title.."\n"..clock(remain),
-        {{self:button("Làm mới",refresh)}},function() self:home() end,{back_text="Dừng"})
+        {{self:button("Làm mới",refresh)}},function() self:home() end,{back_text="Dừng",progress=progress})
     UI:scheduleIn(math.min(10,remain),function() if self.window==window then refresh() end end)
 end
 
@@ -154,7 +171,8 @@ end
 
 function App:studyCard(list,i,reveal,mode)
     local back=function() self[mode](self) end
-    self:view(i.."/"..#list,list[i][1]..(reveal and "\n\n"..list[i][2] or ""),back,{
+    self:view(i.."/"..#list,list[i][1]..(reveal and "\n\n"..list[i][2] or "")
+        .."\n\n"..self:blocks(i/#list),back,{
         rows={{self:button(reveal and "Ẩn đáp án" or "Lật thẻ",function() self:studyCard(list,i,not reveal,mode) end),
             self:button("Thẻ kế tiếp",function() self:studyCard(list,i%#list+1,false,mode) end)}},
     })
@@ -254,12 +272,19 @@ end
 
 function App:dice()
     local choices={}
-    for n=1,3 do choices[#choices+1]={n.." viên",function()
-        local values={}
-        for i=1,n do values[i]=math.random(1,6) end
-        self:notice(table.concat(values,"  ·  "))
-    end} end
+    for n=1,3 do choices[#choices+1]={n.." viên",function() self:diceRoll(n) end} end
     self:menu("Xúc xắc",choices,function() self:utilities() end)
+end
+
+function App:diceRoll(n)
+    local values={}
+    for i=1,n do values[i]=math.random(1,6) end
+    self:grid(3,"Xúc xắc",{{
+        self:button("Tung lại",function() self:diceRoll(n) end),
+    }},function(x,y)
+        local v=values[(y-1)*3+x]
+        return v and tostring(v) or "",v and function() self:diceRoll(n) end or nil
+    end,function() self:dice() end)
 end
 
 function App:coin()
@@ -278,6 +303,8 @@ function App:randomNumber()
     end)
 end
 
+local WATER_GOAL=2000
+
 function App:water(day)
     local date=day or os.date("%Y-%m-%d")
     local data=self:read("water",{})
@@ -287,18 +314,28 @@ function App:water(day)
         self:save("water",data)
         self:water(date)
     end
-    self:show("Nước uống · "..date.."\n"..n.." mL",{
+    self:show("Nước uống · "..date.."\n"..n.." mL / "..WATER_GOAL.." mL",{
         {self:button("+ 250 mL",function() change(250) end),self:button("− 250 mL",function() change(-250) end)},
-        {self:button("Xem 7 ngày",function()
-            local rows={}
-            local today=os.date("*t")
-            for delta=0,6 do
-                local ts=os.time{year=today.year,month=today.month,day=today.day-delta,hour=12}
-                local d=os.date("%Y-%m-%d",ts)
-                rows[#rows+1]=d.." · "..(data[d] or 0).." mL"
-            end
-            self:view("Nước uống · 7 ngày",table.concat(rows,"\n"),function() self:water() end)
-        end)},
-    },function() self:utilities() end)
+        {self:button("Xem 7 ngày",function() self:waterWeek(data) end)},
+    },function() self:utilities() end,{progress=math.min(1,n/WATER_GOAL)})
+end
+
+function App:waterWeek(data)
+    local today=os.date("*t")
+    local columns={}
+    local top=WATER_GOAL
+    for delta=6,0,-1 do
+        local ts=os.time{year=today.year,month=today.month,day=today.day-delta,hour=12}
+        local d=os.date("%Y-%m-%d",ts)
+        local amount=data[d] or 0
+        if amount>top then top=amount end
+        columns[#columns+1]={label=os.date("%d/%m",ts),text=tostring(amount),amount=amount}
+    end
+    for _,col in ipairs(columns) do col.fraction=top>0 and col.amount/top or 0 end
+    self:openPage("Chart",{
+        title="Nước uống · 7 ngày",subtitle="Mục tiêu "..WATER_GOAL.." mL/ngày",icon="water",
+        columns=columns,back=function() self:water() end,
+        redraw=function() self:waterWeek(self:read("water",{})) end,
+    })
 end
 end
