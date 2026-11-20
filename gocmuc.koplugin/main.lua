@@ -70,10 +70,16 @@ function App:openPage(kind,options)
     return window
 end
 
+function App:blocks(fraction,total)
+    total=total or 10
+    local done=math.floor(math.max(0,math.min(1,fraction or 0))*total+0.5)
+    return string.rep("■",done)..string.rep("□",total-done)
+end
+
 function App:show(title, rows, back, options)
     options=options or {}
     return self:openPage("Controls",{title=title,buttons=rows,back=back,back_text=options.back_text,
-        square_count=options.square_count,icon=options.icon,
+        square_count=options.square_count,icon=options.icon,progress=options.progress,
         redraw=function() self:show(title,rows,back,options) end})
 end
 

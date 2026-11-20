@@ -109,7 +109,8 @@ function App:mathResults(quiz)
             self:menu("Lời giải",questions,function() self:mathResults(quiz) end)
         end},
         {"Chọn đề mới",function() self:mathModes(quiz.grade) end},
-    },function() self:mathMenu() end)
+    },function() self:mathMenu() end,
+        {subtitle=self:blocks(right/quiz.total).." · "..right.."/"..quiz.total.." câu đúng"})
 end
 
 local reading={

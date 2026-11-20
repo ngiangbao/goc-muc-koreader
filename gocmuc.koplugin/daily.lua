@@ -142,25 +142,79 @@ local function description(code)
     return code and "Có mưa" or "—"
 end
 
+local function weatherIcon(code)
+    if code==0 then return "sun" end
+    if code and code<=3 then return "cloud" end
+    if code==45 or code==48 then return "fog" end
+    if code and code>=95 then return "storm" end
+    if code==71 or code==73 or code==75 or code==77 or code==85 or code==86 then return "snow" end
+    return code and "rain" or "cloud"
+end
+
+local function shortDate(date)
+    return date and #date>=10 and date:sub(9,10).."/"..date:sub(6,7) or "—"
+end
+
 function App:weather(ts)
     self:online(function()
         local loc=self:read("weather_location",{name="TP Hồ Chí Minh",lat=10.7769,lon=106.7009})
         local url="https://api.open-meteo.com/v1/forecast?latitude="..loc.lat.."&longitude="..loc.lon
             .."&current=temperature_2m,weather_code&daily=weather_code,temperature_2m_min,temperature_2m_max,precipitation_probability_max&timezone=auto&forecast_days=4"
         local data,err=Net.json(url)
-        if not data or not data.current or not data.daily then self:notice(err or "Chưa có dự báo."); return end
-        local current,daily=data.current,data.daily
-        local body={string.format("%s · %s °C\n%s",loc.name,current.temperature_2m or "—",description(current.weather_code))}
-        for i,date in ipairs(daily.time or {}) do
-            body[#body+1]=string.format("%s · %s\n%s–%s °C · Mưa %s%%",date,description(daily.weather_code[i]),
-                daily.temperature_2m_min[i] or "—",daily.temperature_2m_max[i] or "—",
-                daily.precipitation_probability_max[i] or "—")
+        if data and data.current and data.daily then
+            self:save("weather_cache",{location=loc,current=data.current,daily=data.daily,updated=os.time()})
+            self:weatherShow(ts,loc,data.current,data.daily,false)
+            return
         end
-        self:view("Thời tiết",table.concat(body,"\n\n").."\n\nNguồn: Open-Meteo",function() self:calendar(ts) end,{
-            rows={{self:button("Đổi địa điểm",function() self:weatherLocation(ts) end),
-                self:button("Cập nhật",function() self:weather(ts) end)}},
-        })
+        local cached=self:read("weather_cache")
+        if cached and cached.current and cached.daily then
+            self:weatherShow(ts,cached.location or loc,cached.current,cached.daily,true)
+            return
+        end
+        self:notice(err or "Chưa có dự báo.")
     end)
+end
+
+function App:weatherShow(ts,loc,current,daily,stale)
+    local days={}
+    local gmin,gmax
+    for i in ipairs(daily.time or {}) do
+        local mn,mx=daily.temperature_2m_min[i],daily.temperature_2m_max[i]
+        if mn and (not gmin or mn<gmin) then gmin=mn end
+        if mx and (not gmax or mx>gmax) then gmax=mx end
+    end
+    if #(daily.time or {})==0 then self:notice("Chưa có dự báo."); return end
+    gmin,gmax=gmin or 0,gmax or 40
+    for i,date in ipairs(daily.time or {}) do
+        local mx=daily.temperature_2m_max[i]
+        local mn=daily.temperature_2m_min[i]
+        days[#days+1]={
+            label=shortDate(date),icon=weatherIcon(daily.weather_code[i]),
+            max=(mx and math.floor(mx+0.5) or "—").."°",
+            min=(mn and math.floor(mn+0.5) or "—").."°",
+            rain="Mưa "..(daily.precipitation_probability_max[i] or "—").."%",
+            fraction=mx and math.max(0,math.min(1,mx/40)) or 0,
+        }
+    end
+    local today_min,today_max=daily.temperature_2m_min[1],daily.temperature_2m_max[1]
+    local span=(gmax-gmin)>0 and (gmax-gmin) or 1
+    self:openPage("Weather",{
+        location=loc.name..(stale and " · Dữ liệu cũ" or ""),
+        condition_icon=weatherIcon(current.weather_code),
+        temp=(current.temperature_2m and math.floor(current.temperature_2m+0.5) or "—").." °C",
+        desc=description(current.weather_code).." · Nguồn: Open-Meteo",
+        today_label="Hôm nay · "..(today_min and math.floor(today_min+0.5) or "—").."–"
+            ..(today_max and math.floor(today_max+0.5) or "—").." °C",
+        today_lo=today_min and (today_min-gmin)/span or 0,
+        today_hi=today_max and (today_max-gmin)/span or 0,
+        now_mark=current.temperature_2m and (current.temperature_2m-gmin)/span or nil,
+        days=days,
+        back=function() self:calendar(ts) end,
+        on_location=function() self:weatherLocation(ts) end,
+        on_refresh=function() self:weather(ts) end,
+        redraw=function() self:weatherShow(ts,loc,current,daily,stale) end,
+        icon="cloud",
+    })
 end
 
 function App:weatherLocation(ts)
@@ -185,14 +239,43 @@ end
 function App:gold(ts)
     self:online(function()
         local data,err=Net.json("https://www.vang.today/api/prices?type=SJL1L10")
-        if not data or not data.success then self:notice(err or "Chưa có bảng giá."); return end
-        local function vnd(n)
-            return (tostring(n):reverse():gsub("(%d%d%d)","%1."):reverse():gsub("^%.",""))
+        if data and data.success then
+            self:save("gold_cache",{buy=data.buy,sell=data.sell,time=data.time,date=data.date,updated=os.time()})
+            self:goldShow(ts,data.buy,data.sell,data.time,data.date,false)
+            return
         end
-        self:view("Giá vàng SJC 9999",
-            "Mua vào: "..vnd(data.buy).." đ/lượng\nBán ra: "..vnd(data.sell).." đ/lượng\n\n"
-            .."Cập nhật "..(data.time or "").." ngày "..(data.date or "—").."\nNguồn: Vang.today",
-            function() self:calendar(ts) end,{rows={{self:button("Cập nhật",function() self:gold(ts) end)}}})
+        local cached=self:read("gold_cache")
+        if cached and cached.buy and cached.sell then
+            self:goldShow(ts,cached.buy,cached.sell,cached.time,cached.date,true)
+            return
+        end
+        self:notice(err or "Chưa có bảng giá.")
     end)
+end
+
+function App:goldShow(ts,buy,sell,time,date,stale)
+    local function vnd(n)
+        return (tostring(n):reverse():gsub("(%d%d%d)","%1."):reverse():gsub("^%.",""))
+    end
+    local prev=self:read("gold_prev")
+    local trend_icon,trend_text="trend_up","Chưa có lần đo trước để so sánh."
+    if prev and prev.buy and prev.sell then
+        local diff=sell-prev.sell
+        if diff>0 then trend_icon="trend_up"; trend_text="Tăng "..vnd(diff).." đ so với lần trước."
+        elseif diff<0 then trend_icon="trend_down"; trend_text="Giảm "..vnd(-diff).." đ so với lần trước."
+        else trend_text="Không đổi so với lần trước." end
+    end
+    self:save("gold_prev",{buy=buy,sell=sell,time=time,date=date})
+    local top=math.max(buy or 0,sell or 0,1)
+    self:openPage("Gold",{
+        buy_text=vnd(buy).." đ",sell_text=vnd(sell).." đ",
+        buy_fraction=(buy or 0)/top,sell_fraction=(sell or 0)/top,
+        trend_icon=trend_icon,trend_text=trend_text,
+        updated="Cập nhật "..(time or "").." ngày "..(date or "—")..(stale and " · Dữ liệu cũ" or ""),
+        back=function() self:calendar(ts) end,
+        on_refresh=function() self:gold(ts) end,
+        redraw=function() self:goldShow(ts,buy,sell,time,date,stale) end,
+        icon="coin",
+    })
 end
 end
