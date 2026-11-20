@@ -31,4 +31,21 @@ function HAC.parse(html,clean)
     return {title=title,body=table.concat(lines,"\n")}
 end
 
+function HAC.searchResults(response,clean)
+    local results,seen={},{}
+    if type(response)~="table" or response.success~=true or type(response.data)~="table" then return results end
+    for _,song in ipairs(response.data) do
+        if type(song)=="table" and type(song._url)=="string" and type(song._title)=="string" then
+            local url=HAC.url(song._url:sub(1,1)=="/" and "https://hopamchuan.com"..song._url or song._url)
+            local title=clean(song._title)
+            if url and title~="" and not seen[url] then
+                seen[url]=true
+                results[#results+1]={title=title,url=url,artist=type(song._singers)=="string" and clean(song._singers) or ""}
+            end
+        end
+        if #results>=20 then break end
+    end
+    return results
+end
+
 return HAC

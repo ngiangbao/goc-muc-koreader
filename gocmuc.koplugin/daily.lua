@@ -13,9 +13,9 @@ local sources={
 function App:newsMenu()
     local choices={}
     for _,source in ipairs(sources) do
-        choices[#choices+1]={source[1],function() self:newsLoad(source) end}
+        choices[#choices+1]={source[1],function() self:newsLoad(source) end,"news"}
     end
-    self:menu("Đọc báo",choices,function() self:home() end)
+    self:menu("Đọc báo",choices,function() self:home() end,{style="tiles",icon="news"})
 end
 
 function App:newsLoad(source,force)
@@ -42,12 +42,12 @@ function App:newsLoad(source,force)
 end
 
 function App:newsList(source,data)
-    local title=source[1].." · "..os.date("%d/%m %H:%M",data.updated)
-    local choices={{"Làm mới · "..data.via,function() self:newsLoad(source,true) end}}
+    local subtitle=data.via.." · "..os.date("%d/%m %H:%M",data.updated)
+    local choices={{"Làm mới bản tin",function() self:newsLoad(source,true) end,"update"}}
     for i,entry in ipairs(data.entries) do
         choices[#choices+1]={entry.title,function() self:newsArticle(source,data,i) end}
     end
-    self:menu(title,choices,function() self:newsMenu() end)
+    self:menu(source[1],choices,function() self:newsMenu() end,{style="list",icon="news",subtitle=subtitle})
 end
 
 function App:newsArticle(source,data,index,full)
@@ -75,61 +75,62 @@ function App:newsArticle(source,data,index,full)
     self:view(item.title,text,function() self:newsList(source,data) end,{rows=rows,prev=prev,next=next_item})
 end
 
-local weekdays={"Chủ nhật","Thứ hai","Thứ ba","Thứ tư","Thứ năm","Thứ sáu","Thứ bảy"}
 function App:calendar(ts)
     ts=ts or os.time()
     local date=os.date("*t",ts)
-    local label=weekdays[date.wday].." · "..os.date("%d/%m/%Y",ts)
-    local lunar=Lunar.label(date.day,date.month,date.year)
-    local body=label.."\n\nÂm lịch (Việt Nam): "..lunar..
-        "\n\nGiờ hoàng đạo theo lịch dân gian:\n"..Lunar.hours(date.day,date.month,date.year)
     local function on_day(delta)
         return function()
             self:calendar(os.time{year=date.year,month=date.month,day=date.day+delta,hour=12})
         end
     end
-    self:view("Lịch để bàn",body,function() self:home() end,{
-        rows={
-            {self:button("‹ Hôm trước",on_day(-1)),self:button("Hôm sau ›",on_day(1))},
-            {self:button("Tháng",function() self:calendarMonth(date.month,date.year) end),
-             self:button("Hôm nay",function() self:calendar() end)},
-            {self:button("Thời tiết",function() self:weather() end),
-             self:button("Giá vàng",function() self:gold() end)},
-        },
+    local lunar_day,lunar_month,_,leap=Lunar.date(date.day,date.month,date.year)
+    local lunar_year=Lunar.label(date.day,date.month,date.year):match("·%s*(.+)$")
+    local hours={}
+    for hour in Lunar.hours(date.day,date.month,date.year):gmatch("[^,]+") do
+        hours[#hours+1]=(hour:gsub("^%s+",""))
+    end
+    self:openPage("Calendar",{
+        day_info={day=date.day,month=date.month,year=date.year,wday=date.wday,
+            lunar_day=lunar_day,lunar_month=lunar_month,lunar_year=lunar_year,leap=leap,hours=hours},
+        back=function() self:home() end,
+        today=function() self:calendar() end,
+        previous=on_day(-1),next=on_day(1),redraw=function() self:calendar(ts) end,
+        open_month=function() self:calendarMonth(date.month,date.year,ts) end,
+        weather=function() self:weather(ts) end,
+        gold=function() self:gold(ts) end,
     })
 end
 
-function App:calendarMonth(month,year)
-    local rows={}
+function App:calendarMonth(month,year,selected)
+    selected=selected or os.time()
+    local chosen=os.date("*t",selected)
     local first=os.date("*t",os.time{year=year,month=month,day=1,hour=12})
     local last=os.date("*t",os.time{year=year,month=month+1,day=0,hour=12}).day
     local offset=(first.wday+5)%7
-    for cell=0,41 do
-        local r=math.floor(cell/7)+1
-        local day=cell-offset+1
-        rows[r]=rows[r] or {}
-        if day<1 or day>last then
-            rows[r][#rows[r]+1]={text=" ",enabled=false}
-        else
-            local lunar=Lunar.date(day,month,year)
-            rows[r][#rows[r]+1]=self:button(day.." · "..lunar,function()
-                self:calendar(os.time{year=year,month=month,day=day,hour=12})
-            end,{font_size=12})
-        end
-        if day>=last and cell%7==6 then break end
+    local days={}
+    for day=1,last do
+        local ts=os.time{year=year,month=month,day=day,hour=12}
+        days[#days+1]={index=offset+day,day=day,lunar=Lunar.date(day,month,year),
+            selected=chosen.day==day and chosen.month==month and chosen.year==year,
+            open=function() self:calendar(ts) end}
     end
-    rows[#rows+1]={
-        self:button("‹ Tháng trước",function()
-            local prev=os.date("*t",os.time{year=year,month=month-1,day=1,hour=12})
-            self:calendarMonth(prev.month,prev.year)
-        end),
-        self:button("Tháng sau ›",function()
-            local next_month=os.date("*t",os.time{year=year,month=month+1,day=1,hour=12})
-            self:calendarMonth(next_month.month,next_month.year)
-        end),
-    }
-    self:show(string.format("Tháng %02d/%d\nDương · Âm   |   Thứ hai → Chủ nhật",month,year),rows,
-        function() self:calendar() end)
+    local function go(delta)
+        return function()
+            local date=os.date("*t",os.time{year=year,month=month+delta,day=1,hour=12})
+            self:calendarMonth(date.month,date.year,selected)
+        end
+    end
+    self:openPage("Calendar",{
+        month_info={month=month,year=year,days=days},
+        back=function() self:calendar(selected) end,
+        previous=go(-1),next=go(1),
+        redraw=function() self:calendarMonth(month,year,selected) end,
+    })
+end
+
+function App:calendarThisMonth()
+    local date=os.date("*t")
+    self:calendarMonth(date.month,date.year)
 end
 
 local function description(code)
@@ -141,7 +142,7 @@ local function description(code)
     return code and "Có mưa" or "—"
 end
 
-function App:weather()
+function App:weather(ts)
     self:online(function()
         local loc=self:read("weather_location",{name="TP Hồ Chí Minh",lat=10.7769,lon=106.7009})
         local url="https://api.open-meteo.com/v1/forecast?latitude="..loc.lat.."&longitude="..loc.lon
@@ -155,14 +156,14 @@ function App:weather()
                 daily.temperature_2m_min[i] or "—",daily.temperature_2m_max[i] or "—",
                 daily.precipitation_probability_max[i] or "—")
         end
-        self:view("Thời tiết",table.concat(body,"\n\n").."\n\nNguồn: Open-Meteo",function() self:calendar() end,{
-            rows={{self:button("Đổi địa điểm",function() self:weatherLocation() end),
-                self:button("Cập nhật",function() self:weather() end)}},
+        self:view("Thời tiết",table.concat(body,"\n\n").."\n\nNguồn: Open-Meteo",function() self:calendar(ts) end,{
+            rows={{self:button("Đổi địa điểm",function() self:weatherLocation(ts) end),
+                self:button("Cập nhật",function() self:weather(ts) end)}},
         })
     end)
 end
 
-function App:weatherLocation()
+function App:weatherLocation(ts)
     self:prompt("Địa điểm","Ví dụ TP Hồ Chí Minh, Hà Nội hoặc Sydney.","",function(query)
         if query=="" then return end
         self:online(function()
@@ -173,15 +174,15 @@ function App:weatherLocation()
                 local label=place.name.." · "..(place.admin1 or place.country or "")
                 choices[#choices+1]={label,function()
                     self:save("weather_location",{name=label,lat=place.latitude,lon=place.longitude})
-                    self:weather()
+                    self:weather(ts)
                 end}
             end
-            self:menu("Chọn địa điểm",choices,function() self:calendar() end)
+            self:menu("Chọn địa điểm",choices,function() self:calendar(ts) end,{icon="cloud",style="list"})
         end)
     end)
 end
 
-function App:gold()
+function App:gold(ts)
     self:online(function()
         local data,err=Net.json("https://www.vang.today/api/prices?type=SJL1L10")
         if not data or not data.success then self:notice(err or "Chưa có bảng giá."); return end
@@ -191,7 +192,7 @@ function App:gold()
         self:view("Giá vàng SJC 9999",
             "Mua vào: "..vnd(data.buy).." đ/lượng\nBán ra: "..vnd(data.sell).." đ/lượng\n\n"
             .."Cập nhật "..(data.time or "").." ngày "..(data.date or "—").."\nNguồn: Vang.today",
-            function() self:calendar() end,{rows={{self:button("Cập nhật",function() self:gold() end)}}})
+            function() self:calendar(ts) end,{rows={{self:button("Cập nhật",function() self:gold(ts) end)}}})
     end)
 end
 end

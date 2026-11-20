@@ -3,17 +3,17 @@ local UI=env.UI
 
 function App:utilities()
     local groups={
-        {"Việc cần làm","todo"},{"Thói quen","habits"},{"Đồng hồ tập trung","focus"},
-        {"Từ vựng Anh–Việt","words"},{"Sudoku","sudokuMenu"},{"Ghi chú","notes"},
-        {"Bấm giờ","stopwatch"},{"Đếm ngược","countdown"},{"Đổi đơn vị","convert"},
-        {"Máy tính","calculate"},{"Xúc xắc","dice"},{"Tung đồng xu","coin"},
-        {"Bốc số","randomNumber"},{"Thẻ tự tạo","flashcards"},{"Theo dõi nước uống","water"},
+        {"Việc cần làm","todo","list"},{"Thói quen","habits","calendar"},{"Đồng hồ tập trung","focus","clock"},
+        {"Từ vựng Anh–Việt","words","book"},{"Sudoku","sudokuMenu","caro"},{"Ghi chú","notes","news"},
+        {"Bấm giờ","stopwatch","clock"},{"Đếm ngược","countdown","clock"},{"Đổi đơn vị","convert","math"},
+        {"Máy tính","calculate","math"},{"Xúc xắc","dice","dice"},{"Tung đồng xu","coin","coin"},
+        {"Bốc số","randomNumber","dice"},{"Thẻ tự tạo","flashcards","book"},{"Theo dõi nước uống","water","water"},
     }
     local choices={}
     for _,item in ipairs(groups) do
-        choices[#choices+1]={item[1],function() self[item[2]](self) end}
+        choices[#choices+1]={item[1],function() self[item[2]](self) end,item[3]}
     end
-    self:menu("Tiện ích",choices,function() self:home() end)
+    self:menu("Tiện ích",choices,function() self:home() end,{icon="tools",style="list"})
 end
 
 function App:setList(key,title,kind)

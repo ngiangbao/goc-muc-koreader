@@ -1,0 +1,222 @@
+local BB=require("ffi/blitbuffer")
+local Device=require("device")
+local Font=require("ui/font")
+local Geom=require("ui/geometry")
+local GestureRange=require("ui/gesturerange")
+local InputContainer=require("ui/widget/container/inputcontainer")
+local TextWidget=require("ui/widget/textwidget")
+local TextBoxWidget=require("ui/widget/textboxwidget")
+local UI=require("ui/uimanager")
+local Screen=Device.screen
+local floor=math.floor
+
+local Surface=InputContainer:extend{covers_fullscreen=true}
+-- Original 24-unit icons drawn directly on the E Ink framebuffer.
+local icons = {
+    knight={
+        {4,21,20,21,20,18,17,17,17,11,15,7,11,5,9,2,8,6,4,10,4,13,7,14,11,11,13,12,10,16,7,18,4,18,4,21},
+        {10,8,10,8},
+    },
+    math={
+        {5,4,19,4,19,20,5,20,5,4}, {8,8,16,8}, {12,6,12,10},
+        {8,13,11,16}, {11,13,8,16}, {14,13,17,13}, {14,16,17,16},
+    },
+    caro={
+        {8,3,8,21}, {16,3,16,21}, {3,8,21,8}, {3,16,21,16},
+        {3,3,6,6}, {6,3,3,6}, {10,10,14,14}, {14,10,10,14},
+        {18,18,21,18,21,21,18,21,18,18},
+    },
+    news={
+        {4,4,19,4,19,19,17,21,4,21,4,4}, {19,8,22,8,22,19,20,21,17,21},
+        {7,8,15,8}, {7,12,15,12}, {7,16,12,16},
+    },
+    calendar={
+        {3,5,21,5,21,21,3,21,3,5}, {7,3,7,7}, {17,3,17,7},
+        {3,10,21,10}, {8,14,8,14}, {12,14,12,14}, {16,14,16,14}, {8,17,8,17}, {12,17,12,17},
+    },
+    music={
+        {9,18,9,6,20,3,20,15}, {9,9,20,6},
+        {9,18,7,20,4,20,3,18,4,16,7,15,9,16,9,18},
+        {20,15,18,17,15,17,14,15,15,13,18,12,20,13,20,15},
+    },
+    book={
+        {12,6,9,4,3,4,3,18,9,18,12,20,15,18,21,18,21,4,15,4,12,6,12,20},
+        {6,8,9,8}, {6,11,9,11}, {15,8,18,8}, {15,11,18,11},
+    },
+    tools={
+        {5,3,5,21}, {12,3,12,21}, {19,3,19,21},
+        {2,8,8,8}, {9,16,15,16}, {16,10,22,10},
+    },
+    arrow={{8,5,15,12,8,19}},
+    search={{14,14,21,21},{10,17,6,16,4,13,4,8,7,5,12,4,16,7,17,11,15,15,10,17}},
+    add={{5,12,19,12},{12,5,12,19}},
+    clock={{12,3,18,5,21,11,19,18,13,21,6,19,3,13,5,6,12,3},{12,7,12,12,16,14}},
+    cloud={{4,17,20,17,22,14,20,11,17,11,16,7,12,5,8,6,6,10,3,10,2,14,4,17}},
+    coin={{6,8,18,8,21,12,18,16,6,16,3,12,6,8},{7,16,7,18,17,18,17,16}},
+    list={{5,6,7,8,10,4},{12,6,20,6},{5,12,7,14,10,10},{12,12,20,12},{5,18,20,18}},
+    link={{10,8,13,5,18,5,20,9,19,12,16,15},{8,9,4,13,4,17,8,20,13,19,16,16},{9,15,15,9}},
+    dice={{4,4,20,4,20,20,4,20,4,4},{8,8,8,8},{12,12,12,12},{16,16,16,16}},
+    water={{12,3,17,10,20,15,18,20,12,22,6,20,4,15,7,9,12,3}},
+    update={{20,10,18,6,14,4,9,4,5,7,3,12},{20,5,20,10,15,10},{4,14,6,18,10,20,15,20,19,17,21,13},{4,19,4,14,9,14}},
+    muse={{4,5,20,5,20,16,11,16,6,20,6,16,4,16,4,5},{8,10,8,10},{12,10,12,10},{16,10,16,10}},
+}
+
+local function drawIcon(bb, name, x, y, size)
+    local unit=size/24
+    local radius=math.max(1,floor(unit*0.65))
+    for _,path in ipairs(icons[name]) do
+        for i=1,#path-2,2 do
+            local ax,ay=path[i],path[i+1]
+            local dx,dy=path[i+2]-ax,path[i+3]-ay
+            local steps=math.max(1,math.ceil(math.max(math.abs(dx),math.abs(dy))*unit/radius))
+            for step=0,steps do
+                local px=x+floor((ax+dx*step/steps)*unit+0.5)
+                local py=y+floor((ay+dy*step/steps)*unit+0.5)
+                bb:paintCircle(px,py,radius,BB.COLOR_BLACK)
+            end
+        end
+    end
+end
+
+function Surface:label(text,x,y,w,h,px,opts)
+    opts=opts or {}
+    local face_name=opts.face or "ffont"
+    local face=Font:getFace(face_name,math.max(8,floor(px*100/Screen:scaleBySize(100))))
+    local props={text=text,face=face,padding=0,bold=opts.bold,
+        fgcolor=opts.light and BB.COLOR_WHITE or BB.COLOR_BLACK}
+    local widget
+    if opts.wrap then
+        props.width,props.height=w,h
+        props.height_adjust=true
+        props.height_overflow_show_ellipsis=true
+        props.alignment=opts.align or "center"
+        props.line_height=0
+        widget=TextBoxWidget:new(props)
+    else
+        props.max_width=w
+        widget=TextWidget:new(props)
+    end
+    local span=widget:getSize()
+    local dx=opts.align=="left" and 0 or opts.align=="right" and w-span.w or floor((w-span.w)/2)
+    self.labels[#self.labels+1]={widget=widget,x=x+dx,y=y+floor((h-span.h)/2)}
+end
+
+function Surface:drawGlyph(bb,name,x,y,size)
+    drawIcon(bb,icons[name] and name or "arrow",x,y,size)
+end
+
+function Surface:paintLabels(bb,x,y)
+    for _,item in ipairs(self.labels) do item.widget:paintTo(bb,x+item.x,y+item.y) end
+end
+
+function Surface:area(x,y,w,h,r,fill,callback)
+    local card={x=x,y=y,w=w,h=h,r=r,fill=fill,callback=callback}
+    self.cards[#self.cards+1]=card
+    if callback then self.targets[#self.targets+1]=card end
+    return card
+end
+
+function Surface:control(text,x,y,w,h,callback,options)
+    options=options or {}
+    local card=self:area(x,y,w,h,options.radius or self.round,options.dark and BB.COLOR_BLACK or
+        options.fill or BB.COLOR_GRAY_E,callback)
+    local pad=options.pad or math.floor(w*0.045)
+    self:label(text,x+pad,y,w-2*pad,h,options.font or math.min(math.floor(h*0.34),self.hint_size),
+        {bold=options.bold,light=options.dark,align=options.align,wrap=options.wrap})
+    return card
+end
+
+function Surface:header(title,subtitle,glyph,header_h)
+    local edge=self.margin
+    local size=math.min(self.hint_size*2,math.floor(header_h*0.35))
+    if glyph then self.glyphs[#self.glyphs+1]={icon=glyph,x=edge,y=edge,size=size} end
+    local left=glyph and edge+size+self.gap or edge
+    local right=self.dimen.w-edge
+    local body=header_h-edge-self.gap
+    local title_h=subtitle and math.floor(body*0.62) or body
+    self:label(title,left,edge,right-left,title_h,
+        math.min(math.floor(title_h*0.47),self.title_size),{bold=true,align="left",wrap=true})
+    if subtitle then
+        self:label(subtitle,left,edge+title_h,right-left,body-title_h,
+            math.min(self.hint_size,math.floor((body-title_h)*0.58)),{align="left"})
+    end
+end
+
+function Surface:init()
+    self.dimen=Geom:new{w=Screen:getWidth(),h=Screen:getHeight()}
+    self.labels,self.targets,self.cards,self.glyphs={},{},{},{}
+    local unit=math.min(self.dimen.w,self.dimen.h)
+    self.margin=floor(unit*0.048)
+    self.gap=math.max(3,floor(unit*0.018))
+    self.round=floor(unit*0.026)
+    self.stroke=math.max(1,floor(unit*0.0025))
+    self.hint_size=floor(unit*0.028)
+    self.title_size=floor(unit*0.057)
+    self:build()
+    self.ges_events={
+        TileTap={GestureRange:new{ges="tap",range=self.dimen}},
+        TileSwipe={GestureRange:new{ges="swipe",range=self.dimen}},
+    }
+    if Device:hasKeys() then
+        self.key_events=self.key_events or {}
+        self.key_events.CloseSurface={{Device.input.group.Back}}
+    end
+end
+
+function Surface:paintTo(bb,x,y)
+    bb:paintRect(x,y,self.dimen.w,self.dimen.h,BB.COLOR_WHITE)
+    for _,card in ipairs(self.cards) do
+        if card.fill then
+            if card.r>0 then bb:paintRoundedRect(x+card.x,y+card.y,card.w,card.h,card.fill,card.r)
+            else bb:paintRect(x+card.x,y+card.y,card.w,card.h,card.fill) end
+        end
+        if not card.no_border then
+            bb:paintBorder(x+card.x,y+card.y,card.w,card.h,self.stroke,BB.COLOR_BLACK,card.r,true)
+        end
+    end
+    for _,glyph in ipairs(self.glyphs) do self:drawGlyph(bb,glyph.icon,x+glyph.x,y+glyph.y,glyph.size) end
+    self:paintLabels(bb,x,y)
+end
+
+function Surface:onTarget(item)
+    if item.callback then item.callback() end
+end
+
+function Surface:onTileTap(_,gesture)
+    local x,y=gesture.pos.x,gesture.pos.y
+    for _,item in ipairs(self.targets) do
+        if x>=item.x and x<item.x+item.w and y>=item.y and y<item.y+item.h then
+            self:onTarget(item)
+            break
+        end
+    end
+    return true
+end
+
+function Surface:onTileSwipe()
+    return true
+end
+
+function Surface:onSetDimensions()
+    if Screen:getWidth()~=self.dimen.w or Screen:getHeight()~=self.dimen.h then
+        UI:nextTick(function()
+            if self.app.window==self then self:onSurfaceResize() end
+        end)
+    end
+end
+
+function Surface:onCloseSurface()
+    if self.back then self.back() else self.app:close() end
+    return true
+end
+
+function Surface:onShow()
+    UI:setDirty(self,"ui")
+end
+
+function Surface:onCloseWidget()
+    for _,item in ipairs(self.labels) do item.widget:free() end
+    UI:setDirty(nil,"ui")
+end
+
+return Surface

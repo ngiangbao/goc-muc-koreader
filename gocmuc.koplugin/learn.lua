@@ -7,9 +7,9 @@ local UI=env.UI
 function App:mathMenu()
     local choices={}
     for grade=1,5 do
-        choices[#choices+1]={"Lớp "..grade,function() self:mathModes(grade) end}
+        choices[#choices+1]={"Lớp "..grade,function() self:mathModes(grade) end,"math"}
     end
-    self:menu("Toán tư duy · Việt / Anh",choices,function() self:home() end)
+    self:menu("Toán tư duy",choices,function() self:home() end,{icon="math",subtitle="Lớp 1–5 · Việt / Anh"})
 end
 
 function App:mathModes(grade)
@@ -34,7 +34,7 @@ function App:mathModes(grade)
             end,{number=true,action="Bắt đầu"})
         end}
     end
-    self:menu("Toán tư duy · Lớp "..grade,choices,function() self:mathMenu() end)
+    self:menu("Toán tư duy · Lớp "..grade,choices,function() self:mathMenu() end,{icon="math",style="tiles"})
 end
 
 local function duration(seconds)
@@ -148,7 +148,7 @@ function App:kidsMenu()
             show()
         end}
     end
-    self:menu("Bé đọc",choices,function() self:home() end)
+    self:menu("Bé đọc",choices,function() self:home() end,{icon="book"})
 end
 
 local names={"C","C#","D","D#","E","F","F#","G","G#","A","A#","B"}
@@ -175,7 +175,7 @@ local samples={
 }
 
 function App:chordMenu()
-    local choices={{"Thêm bài hợp âm",function()
+    local choices={{"Tìm bài hát",function() self:chordSearch() end,"search"},{"Thêm bài hợp âm",function()
         self:prompt("Tên bài",nil,"",function(title)
             if title=="" then return end
             self:prompt("Nội dung","Dùng [C], [Am], [G/B] quanh các hợp âm.","",function(body)
@@ -186,13 +186,35 @@ function App:chordMenu()
                 self:chordMenu()
             end,{multiline=true})
         end)
-    end},{"Nhập từ Hợp Âm Chuẩn",function() self:importChords() end}}
+    end,"add"},{"Nhập bằng link",function() self:importChords() end,"link"}}
     for _,list in ipairs({samples,self:read("chords",{})}) do
         for _,song in ipairs(list) do
-            choices[#choices+1]={song.title,function() self:chordView(song,0) end}
+            choices[#choices+1]={song.title,function() self:chordView(song,0) end,"music"}
         end
     end
-    self:menu("Hợp âm",choices,function() self:home() end)
+    self:menu("Hợp âm",choices,function() self:home() end,{icon="music"})
+end
+
+function App:chordSearch(initial)
+    self:prompt("Tìm bài hát","Nhập tên bài hát hoặc ca sĩ. Cần Wi-Fi để tìm trên Hợp Âm Chuẩn.",
+        initial or "",function(query)
+            if #query<2 or #query>150 then self:notice("Nhập tên bài hát hoặc ca sĩ."); return end
+            self:online(function()
+                local response,err=Net.json("https://hopamchuan.com/autocomplete","q="..Net.escape(query))
+                if not response then self:notice(err); return end
+                local results=HAC.searchResults(response,Net.clean)
+                local function show()
+                    local choices={{"Tìm lại",function() self:chordSearch(query) end,"search"}}
+                    for _,song in ipairs(results) do
+                        local label=song.title..(song.artist~="" and "\n"..song.artist or "")
+                        choices[#choices+1]={label,function() self:loadChords(song.url,show) end,"music"}
+                    end
+                    self:menu(#results>0 and "Kết quả tìm bài hát" or "Chưa tìm thấy bài",
+                        choices,function() self:chordMenu() end,{style="list",icon="search",subtitle=query})
+                end
+                show()
+            end)
+        end,{action="Tìm bài"})
 end
 
 function App:importChords()
@@ -201,31 +223,35 @@ function App:importChords()
         "",function(value)
             local url=HAC.url(value)
             if not url then self:notice("Hãy nhập link một bài hát từ hopamchuan.com."); return end
-            self:online(function()
-                local html,err=Net.request(url)
-                if not html then self:notice(err); return end
-                local song,message=HAC.parse(html,Net.clean)
-                if not song then self:notice(message); return end
-                song.source=url
-                local saved=self:read("chords",{})
-                local index=#saved+1
-                for i,entry in ipairs(saved) do
-                    if entry.source==url then index=i; break end
-                end
-                saved[index]=song
-                self:save("chords",saved)
-                self:chordView(song,0)
-            end)
+            self:loadChords(url)
         end,{action="Nhập hợp âm"})
 end
 
-function App:chordView(song,steps)
+function App:loadChords(url,back)
+    self:online(function()
+        local html,err=Net.request(url)
+        if not html then self:notice(err); return end
+        local song,message=HAC.parse(html,Net.clean)
+        if not song then self:notice(message); return end
+        song.source=url
+        local saved=self:read("chords",{})
+        local index=#saved+1
+        for i,entry in ipairs(saved) do
+            if entry.source and entry.source:gsub("/$","")==url:gsub("/$","") then index=i; break end
+        end
+        saved[index]=song
+        self:save("chords",saved)
+        self:chordView(song,0,back)
+    end)
+end
+
+function App:chordView(song,steps,back)
     local body=transpose(song.body,steps)
     if song.source then body=body.."\n\nNguồn: Hợp Âm Chuẩn\n"..song.source end
-    self:view(song.title.." · "..string.format("%+d",steps),body,function() self:chordMenu() end,{
-        rows={{self:button("− Nửa tông",function() self:chordView(song,steps-1) end),
-            self:button("Giọng gốc",function() self:chordView(song,0) end),
-            self:button("+ Nửa tông",function() self:chordView(song,steps+1) end)}},
+    self:view(song.title.." · "..string.format("%+d",steps),body,back or function() self:chordMenu() end,{
+        rows={{self:button("− Nửa tông",function() self:chordView(song,steps-1,back) end),
+            self:button("Giọng gốc",function() self:chordView(song,0,back) end),
+            self:button("+ Nửa tông",function() self:chordView(song,steps+1,back) end)}},
     })
 end
 end

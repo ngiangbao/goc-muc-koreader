@@ -2,7 +2,7 @@
 
 Góc Mực là plugin tiếng Việt của [@ngiangbao](https://github.com/ngiangbao), hướng tới Kindle Basic 2024 đã jailbreak và cài KOReader. Plugin mở một trang riêng từ menu KOReader. Cảm hứng đến từ [bài chia sẻ về góc học tập trên Kindle của Nguyễn Việt An](https://www.facebook.com/share/p/1CY1kR7tiE/).
 
-Trang chủ hiển thị các ô vuông bo góc với biểu tượng đen trắng. Chạm **Học & chơi** hoặc **Hằng ngày**, hoặc vuốt ngang để chuyển trang.
+Trang chủ gom 20 ô có biểu tượng đen trắng vào một lưới **4 cột × 5 hàng**. Các màn của Góc Mực dùng toàn bộ màn hình. Các mục chức năng có ô bo góc, còn danh sách dài có nút chuyển trang và hỗ trợ vuốt.
 
 ## Cài đặt
 
@@ -40,13 +40,30 @@ Từ **Góc Mực → Cập nhật → Kiểm tra Góc Mực**, plugin kiểm tr
 | --- | --- |
 | Toán tư duy | Năm cấp lớp, luyện 10 câu, đề mô phỏng Kangaroo 24 câu và ASMO 25 câu, hẹn giờ, điểm 3–4–5, câu hỏi ngẫu nhiên và lời giải Việt–Anh. Kangaroo trừ ¼ điểm của câu chọn sai. |
 | Cờ caro | Bàn 13 × 13, thắng khi có ít nhất năm quân liên tiếp còn đầu mở, năm mức đối thủ, hai người chung máy, phòng qua Wi-Fi. |
-| Đọc báo | Báo Mới, Tuổi Trẻ, Thanh Niên, VnExpress, Znews và Báo Quốc Tế. Ưu tiên nguồn RSS tòa soạn, dùng Google Tin tức khi cần. Có bản tóm tắt, nút trước/sau và hỗ trợ nút cứng trên thiết bị có phím khi đến rìa trang. Nội dung đầy đủ phụ thuộc vào trang bài viết. |
-| Lịch để bàn | Ngày âm và dương, lịch tháng, giờ hoàng đạo dân gian, thời tiết hiện tại và dự báo bốn ngày, giá vàng SJC. Địa điểm thời tiết mặc định là TP Hồ Chí Minh và có thể đổi trong plugin. |
-| Hợp âm | Hai bài tập mẫu, nội dung tự nhập và nhập từ đường dẫn bài hát công khai trên Hợp Âm Chuẩn. Góc Mực lưu các ký hiệu hợp âm theo từng dòng để xem offline và đổi tông theo nửa cung. |
+| Đọc báo | Sáu ô nguồn báo, danh sách tin và màn đọc toàn màn hình. Ưu tiên nguồn RSS tòa soạn, dùng Google Tin tức khi cần. Có bản tóm tắt, nút trước/sau và hỗ trợ nút cứng trên thiết bị có phím khi đến rìa trang. Nội dung đầy đủ phụ thuộc vào trang bài viết. |
+| Lịch để bàn | Màn xem ngày và xem tháng toàn màn hình, ngày âm dương, giờ hoàng đạo dân gian, thời tiết hiện tại và dự báo bốn ngày, giá vàng SJC. Mặc định thời tiết là TP Hồ Chí Minh. |
+| Hợp âm | Tìm tên bài hoặc ca sĩ trên Hợp Âm Chuẩn qua Wi-Fi. Chọn một kết quả để nhập và lưu ký hiệu hợp âm tự động. Hỗ trợ xem offline, đổi tông và nhập bằng link. |
 | Bé đọc | Bộ mẫu truyện kể lại, ca dao, tục ngữ và câu đố. |
 | 15 tiện ích | Việc cần làm, thói quen, tập trung, từ vựng, Sudoku, ghi chú, bấm giờ, đếm ngược, đổi đơn vị, máy tính, xúc xắc, đồng xu, bốc số, thẻ tự tạo và nước uống. |
 
 Các đề toán do plugin sinh để luyện. Bản đầu có minh họa bằng ký hiệu và sơ đồ chữ. Báo, giá vàng và thời tiết dùng Wi-Fi. Giá vàng theo dữ liệu của Vang.today và hiển thị mốc thời gian của nguồn.
+
+## Nhắn Muse qua Tailscale
+
+Ô **Muse** gửi văn bản vào chat phụ qua **Muse Gadget SDK chính thức** và hiển thị câu trả lời trên Kindle. Kindle kết nối qua Tailscale tới cầu nối đi kèm, chạy trên máy Linux như Raspberry Pi. Máy Linux phải có Node.js 20+, Tailscale và Muse Gadget SDK đã ghép với ứng dụng Muse trên điện thoại. Hai thiết bị cần cùng tailnet và được quyền truy cập cổng của cầu nối. [Hướng dẫn ghép Muse Gadget SDK](https://github.com/facebookincubator/muse-gadget-sdk/tree/main/linux)
+
+Trên máy Linux đã ghép, chạy các lệnh sau bằng tài khoản dùng được `musegadget send-user-msg`. Cổng mặc định là 8091.
+
+```sh
+export MUSE_BIND="$(tailscale ip -4)"
+export MUSE_BRIDGE_TOKEN="$(node -e 'process.stdout.write(require("node:crypto").randomBytes(32).toString("hex"))')"
+printf 'Khóa cầu nối: %s\n' "$MUSE_BRIDGE_TOKEN"
+node server/muse.mjs
+```
+
+Trên Kindle, vào **Muse → Thiết lập cầu nối**. Nhập địa chỉ IPv4 Tailscale của máy Linux, ví dụ `http://100.80.10.20:8091`, và khóa cầu nối 64 ký tự vừa tạo. Chọn **Kiểm tra kết nối** rồi **Soạn tin nhắn**. Khóa này xác thực Kindle với cầu nối. SDK token của Muse nằm trên máy Linux đã ghép. Chỉ dùng cầu nối trong tailnet.
+
+Cầu nối chỉ giữ kết quả tạm thời trong bộ nhớ. Mỗi lần khởi động mặc định tạo một chat phụ mới. Đặt `MUSE_SESSION_ID` thành UUID cố định nếu muốn tiếp tục chat đó sau khi khởi động lại.
 
 ## Cờ caro giữa Kindle và máy tính
 
@@ -69,7 +86,7 @@ Nếu Windows hỏi về mạng, có thể cho phép Node.js qua tường lửa 
 lua tests/core.lua
 lua tests/plugin.lua
 lua tests/ota.lua
-node --test tests/room.test.mjs
+node --test tests/room.test.mjs tests/muse.test.mjs
 ```
 
 Các bài kiểm tra dùng logic cục bộ, giao diện KOReader mô phỏng và hai máy khách HTTP. Bản phát hành đầu chưa được chạy trên Kindle Basic 2024 vật lý. Khi báo lỗi, ghi phiên bản KOReader, phiên bản plugin liên quan và trích đoạn `crash.log` sau khi bỏ dữ liệu cá nhân.

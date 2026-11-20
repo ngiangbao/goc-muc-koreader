@@ -16,10 +16,10 @@ end
 
 function App:chessMenu()
     self:menu("Cờ vua",{
-        {"Cờ vua T4 · Hoàng Tuấn",function() self:openT4("chess") end},
-        {"Cờ vua cho bé · 6 mức",function() self:kidsChessMenu() end},
-        {"Đấu Lichess · Ink Knight",function() self:openInkKnight() end},
-    },function() self:home() end)
+        {"Cờ vua T4\nHoàng Tuấn",function() self:openT4("chess") end,"knight"},
+        {"Cờ vua cho bé\n6 mức",function() self:kidsChessMenu() end,"book"},
+        {"Đấu Lichess\nInk Knight",function() self:openInkKnight() end,"link"},
+    },function() self:home() end,{icon="knight",style="tiles"})
 end
 
 function App:openT4(tab)
@@ -80,7 +80,7 @@ function App:kidsChessMenu()
                 end},
             },function() self:kidsChessMenu() end)
         end},
-    },function() self:chessMenu() end)
+    },function() self:chessMenu() end,{icon="knight"})
 end
 
 function App:kidsLevels()
@@ -90,7 +90,7 @@ function App:kidsLevels()
             self:kidsChess({pos=Chess.fromFen(),history={},level=level})
         end}
     end
-    self:menu("Chọn độ khó",rows,function() self:kidsChessMenu() end)
+    self:menu("Chọn độ khó",rows,function() self:kidsChessMenu() end,{icon="knight"})
 end
 
 function App:kidsChess(game)
@@ -172,7 +172,7 @@ function App:caroMenu()
     for level,title in ipairs({"Tập chơi","Dễ","Vừa","Khó","Cao thủ"}) do
         entries[#entries+1]={title,function() self:caroGame({board={},turn="X",moves={},level=level}) end}
     end
-    self:menu("Cờ caro · chặn hai đầu",entries,function() self:home() end)
+    self:menu("Cờ caro",entries,function() self:home() end,{icon="caro",subtitle="Luật chặn hai đầu"})
 end
 
 local function other(mark)
@@ -302,7 +302,7 @@ function App:roomMenu()
             end)
         end})
     end
-    self:menu("Cờ caro theo mã phòng",choices,function() self:caroMenu() end)
+    self:menu("Cờ caro theo mã phòng",choices,function() self:caroMenu() end,{icon="link"})
 end
 
 function App:sudokuMenu()
@@ -316,7 +316,7 @@ function App:sudokuMenu()
             self:sudokuGame(game)
         end}
     end
-    self:menu("Sudoku",choices,function() self:utilities() end)
+    self:menu("Sudoku",choices,function() self:utilities() end,{icon="caro"})
 end
 
 function App:sudokuGame(game)

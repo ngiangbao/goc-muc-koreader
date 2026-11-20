@@ -5,15 +5,15 @@ local OTA=dofile(env.root.."/ota.lua")
 
 function App:updates()
     self:menu("Cập nhật qua Wi-Fi",{
-        {"Kiểm tra Góc Mực · "..env.version,function() self:checkGocMucUpdate() end},
-        {"Cập nhật T4 · Hoàng Tuấn",function() self:openT4("settings") end},
+        {"Kiểm tra Góc Mực · "..env.version,function() self:checkGocMucUpdate() end,"update"},
+        {"Cập nhật T4 · Hoàng Tuấn",function() self:openT4("settings") end,"knight"},
         {"Cập nhật Ink Knight",function()
             self:view("Ink Knight · Beater Studios",
                 "Tải bản mới từ GitHub của tác giả. Thoát KOReader rồi cập nhật thư mục ink_knight.koplugin qua USB.\n\n"
                 .."github.com/beater-studios/ink_knight.koplugin/releases/latest",
                 function() self:updates() end)
-        end},
-    },function() self:home() end)
+        end,"link"},
+    },function() self:home() end,{icon="update",style="tiles"})
 end
 
 function App:checkGocMucUpdate()

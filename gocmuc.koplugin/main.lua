@@ -1,7 +1,7 @@
 local BB = require("ffi/blitbuffer")
-local ButtonDialog = require("ui/widget/buttondialog")
 local DataStorage = require("datastorage")
 local Device = require("device")
+local Font = require("ui/font")
 local InfoMessage = require("ui/widget/infomessage")
 local InputDialog = require("ui/widget/inputdialog")
 local LuaSettings = require("luasettings")
@@ -14,6 +14,7 @@ local Screen = Device.screen
 
 local root = debug.getinfo(1,"S").source:gsub("^@",""):gsub("[/\\]main%.lua$","")
 local version = dofile(root.."/_meta.lua").version
+local Pages = dofile(root.."/pages.lua")
 local App = Widget:extend{name="gocmuc",is_doc_only=false}
 
 function App:init()
@@ -54,31 +55,39 @@ function App:button(text,action,fields)
     return item
 end
 
-function App:show(title, rows, back, options)
+function App:openPage(kind,options)
     self:close()
-    options=options or {}
-    if back then
-        rows[#rows+1]={{text=options.back_text or "‹ Quay lại",callback=back}}
-    end
-    local window=ButtonDialog:new{
-        title=title, buttons=rows, width_factor=options.width_factor or 0.94,
-        title_face=options.title_face, dismissable=true,
-        tap_close_callback=function()
-            self.window=nil
-            if back then UI:nextTick(back) end
-        end,
-    }
+    options.app=self
+    local window=Pages[kind]:new(options)
     self.window=window
     UI:show(window)
     return window
 end
 
-function App:menu(title, choices, back)
-    local rows={}
-    for _,option in ipairs(choices) do
-        rows[#rows+1]={{text=option[1],callback=option[2],align="left",font_size=18}}
+function App:show(title, rows, back, options)
+    options=options or {}
+    return self:openPage("Controls",{title=title,buttons=rows,back=back,back_text=options.back_text,
+        square_count=options.square_count,icon=options.icon,
+        redraw=function() self:show(title,rows,back,options) end})
+end
+
+function App:menu(title, choices, back, options, page)
+    options=options or {}
+    return self:openPage("Menu",{title=title,choices=choices,back=back,style=options.style,
+        subtitle=options.subtitle,icon=options.icon,page=page,
+        redraw=function(next_page) self:menu(title,choices,back,options,next_page) end})
+end
+
+local function styleButtons(table_widget)
+    if not table_widget then return end
+    for _,row in ipairs(table_widget.buttons_layout or {}) do
+        for _,button in pairs(row) do
+            if button.frame then
+                button.frame.background=BB.COLOR_GRAY_E
+                button.frame.radius=Screen:scaleBySize(11)
+            end
+        end
     end
-    return self:show(title,rows,back)
 end
 
 function App:view(title,text,back,options)
@@ -90,9 +99,13 @@ function App:view(title,text,back,options)
         UI:close(window)
         if back then UI:nextTick(back) end
     end
-    local rows=options.rows or {}
+    local rows={}
+    for _,row in ipairs(options.rows or {}) do rows[#rows+1]=row end
     rows[#rows+1]={{text="‹ Quay lại",callback=leave}}
-    window=TextViewer:new{title=title,title_multilines=true,text=text,show_menu=false,
+    local border=2*Size.border.window
+    window=TextViewer:new{title=title,title_multilines=true,title_face=Font:getFace("ffont",24),
+        width=Screen:getWidth()-border,height=Screen:getHeight()-border,
+        covers_fullscreen=true,text=text,show_menu=false,
         text_format="txt",buttons_table=rows,page_turn_callback_prev=options.prev,page_turn_callback_next=options.next,
         close_callback=function()
             if self.window==window then
@@ -100,6 +113,8 @@ function App:view(title,text,back,options)
                 if back then UI:nextTick(back) end
             end
         end}
+    if window.frame then window.frame.radius=0 end
+    styleButtons(window.button_table)
     self.window=window
     UI:show(window)
 end
@@ -109,6 +124,7 @@ function App:prompt(title, desc, initial, cb, options)
     local panel
     panel=InputDialog:new{
         title=title,description=desc,input=initial or "",input_type=options.number and "number" or nil,
+        fullscreen=true,
         allow_newline=options.multiline or false,buttons={{{text="Hủy",callback=function() UI:close(panel) end},
         {text=options.action or "OK",is_enter_default=not options.multiline,callback=function()
             local value=panel:getInputText():match("^%s*(.-)%s*$")
@@ -118,6 +134,7 @@ function App:prompt(title, desc, initial, cb, options)
     }
     UI:show(panel)
     panel:onShowKeyboard()
+    styleButtons(panel.button_table)
 end
 
 function App:online(fn, local_network)
@@ -131,40 +148,35 @@ function App:online(fn, local_network)
 end
 
 function App:grid(size, title, rows, render, back)
-    local side=math.min(Screen:getWidth(),Screen:getHeight())
-    local cell=math.floor(math.min(side*0.89,Screen:getHeight()*0.73)/size)
-    local label_height=math.max(8,cell-2*Size.padding.buttontable)
-    local font=math.max(9,math.floor(cell*0.55*160/Screen:getDPI()))
     local grid={}
     for y=1,size do
         grid[y]={}
         for x=1,size do
             local text,callback,shade,symbol=render(x,y)
             grid[y][x]=self:button(text,callback,{
-                font_face=symbol and "freefont/FreeSerif.ttf" or nil, font_size=font,
-                font_bold=false,height=label_height,background=shade and BB.COLOR_GRAY_D or BB.COLOR_WHITE,
+                font_face=symbol and "freefont/FreeSerif.ttf" or nil,
+                font_bold=false,background=shade and BB.COLOR_GRAY_D or BB.COLOR_WHITE,
                 enabled=callback~=nil,
             })
         end
     end
     for _,row in ipairs(rows) do grid[#grid+1]=row end
-    return self:show(title,grid,back,{width_factor=0.96})
+    return self:show(title,grid,back,{square_count=size})
 end
 
 local Lunar=dofile(root.."/lunar.lua")
 local Home=dofile(root.."/home.lua")
 local extras={Lunar=Lunar,root=root,UI=UI,version=version}
-for _,file in ipairs({"games","learn","daily","utilities","updates"}) do
+for _,file in ipairs({"games","learn","daily","utilities","updates","muse"}) do
     dofile(root.."/"..file..".lua")(App,extras)
 end
 
-function App:home(page)
+function App:home()
     local date=os.date("*t")
     local ok,power=pcall(function() return Device:getPowerDevice():getCapacity() end)
-    self.home_page=page or self.home_page or 1
     self:close()
     local window=Home:new{
-        app=self,page=self.home_page,clock=os.date("%H:%M"),date=os.date("%d/%m/%Y"),
+        app=self,clock=os.date("%H:%M"),date=os.date("%d/%m/%Y"),
         lunar="Âm "..Lunar.label(date.day,date.month,date.year),
         battery=ok and power and "Pin "..power.."%" or "Pin —",
     }

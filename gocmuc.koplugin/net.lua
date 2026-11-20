@@ -13,9 +13,11 @@ function Net.request(url, values, token)
     local options = {url=url, redirect=not token, headers={["user-agent"]="GocMuc/0.1 KOReader"}}
     if token then options.headers.authorization="Bearer "..token end
     if values then
-        local body=json.encode(values)
+        local form=type(values)=="string"
+        local body=form and values or json.encode(values)
         options.method="POST"
-        options.headers["content-type"]="application/json"
+        options.headers["content-type"]=form and "application/x-www-form-urlencoded" or "application/json"
+        if form then options.headers["x-requested-with"]="XMLHttpRequest" end
         options.headers["content-length"]=#body
         options.source=ltn12.source.string(body)
     end
