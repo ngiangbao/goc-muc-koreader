@@ -13,7 +13,7 @@ function App:updates()
                 .."github.com/beater-studios/ink_knight.koplugin/releases/latest",
                 function() self:updates() end)
         end,"link"},
-    },function() self:home() end,{icon="update",style="tiles"})
+    },function() self:home() end,{icon="update"})
 end
 
 function App:checkGocMucUpdate()

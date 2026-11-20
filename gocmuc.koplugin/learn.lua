@@ -34,7 +34,7 @@ function App:mathModes(grade)
             end,{number=true,action="Bắt đầu"})
         end}
     end
-    self:menu("Toán tư duy · Lớp "..grade,choices,function() self:mathMenu() end,{icon="math",style="tiles"})
+    self:menu("Toán tư duy · Lớp "..grade,choices,function() self:mathMenu() end,{icon="math"})
 end
 
 local function duration(seconds)
@@ -75,7 +75,7 @@ function App:mathQuestion(quiz)
         self:menu("Dừng làm bài?",{
             {"Tiếp tục",function() self:mathQuestion(quiz) end},
             {"Nộp và xem kết quả",function() self:mathResults(quiz) end},
-            {"Thoát bài",function() self.active_quiz=nil; self:mathModes(quiz.grade) end},
+            {"Thoát bài",function() self:home() end,"exit"},
         },function() self:mathQuestion(quiz) end)
     end
     self:view(header,question,exit,{rows=rows})
@@ -210,11 +210,11 @@ function App:chordSearch(initial)
                         choices[#choices+1]={label,function() self:loadChords(song.url,show) end,"music"}
                     end
                     self:menu(#results>0 and "Kết quả tìm bài hát" or "Chưa tìm thấy bài",
-                        choices,function() self:chordMenu() end,{style="list",icon="search",subtitle=query})
+                        choices,function() self:chordMenu() end,{icon="search",subtitle=query})
                 end
                 show()
             end)
-        end,{action="Tìm bài"})
+        end,{action="Tìm bài",icon="search"})
 end
 
 function App:importChords()

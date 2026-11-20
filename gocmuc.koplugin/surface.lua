@@ -59,6 +59,16 @@ local icons = {
     water={{12,3,17,10,20,15,18,20,12,22,6,20,4,15,7,9,12,3}},
     update={{20,10,18,6,14,4,9,4,5,7,3,12},{20,5,20,10,15,10},{4,14,6,18,10,20,15,20,19,17,21,13},{4,19,4,14,9,14}},
     muse={{4,5,20,5,20,16,11,16,6,20,6,16,4,16,4,5},{8,10,8,10},{12,10,12,10},{16,10,16,10}},
+    home={{3,11,12,3,21,11},{5,10,5,21,19,21,19,10},{10,21,10,15,14,15,14,21}},
+    sudoku={{3,3,21,3,21,21,3,21,3,3},{9,3,9,21},{15,3,15,21},{3,9,21,9},{3,15,21,15},
+        {6,6,6,6},{12,12,12,12},{18,18,18,18}},
+    note={{5,3,15,3,20,8,20,21,5,21,5,3},{15,3,15,8,20,8},{8,12,17,12},{8,16,17,16}},
+    alarm={{9,2,15,2},{12,2,12,5},{18,6,20,4},{12,5,17,7,20,12,19,17,15,21,9,21,4,17,4,11,7,7,12,5},
+        {12,9,12,13,15,14}},
+    focus={{8,3,3,3,3,8},{16,3,21,3,21,8},{21,16,21,21,16,21},{8,21,3,21,3,16},
+        {10,7,14,7,17,10,17,14,14,17,10,17,7,14,7,10,10,7}},
+    help={{12,3,18,5,21,11,19,18,13,21,6,19,3,13,5,6,12,3},{12,7,12,7},{12,11,12,17}},
+    exit={{12,3,5,3,5,21,12,21},{9,12,21,12},{17,8,21,12,17,16}},
 }
 
 local function drawIcon(bb, name, x, y, size)
@@ -87,6 +97,7 @@ function Surface:label(text,x,y,w,h,px,opts)
     local widget
     if opts.wrap then
         props.width,props.height=w,h
+        props.bgcolor=opts.fill or BB.COLOR_WHITE
         props.height_adjust=true
         props.height_overflow_show_ellipsis=true
         props.alignment=opts.align or "center"
@@ -120,20 +131,58 @@ function Surface:control(text,x,y,w,h,callback,options)
     options=options or {}
     local card=self:area(x,y,w,h,options.radius or self.round,options.dark and BB.COLOR_BLACK or
         options.fill or BB.COLOR_GRAY_E,callback)
-    local pad=options.pad or math.floor(w*0.045)
-    self:label(text,x+pad,y,w-2*pad,h,options.font or math.min(math.floor(h*0.34),self.hint_size),
-        {bold=options.bold,light=options.dark,align=options.align,wrap=options.wrap})
+    local pad=options.pad or math.floor(w*0.07)
+    local text_x=x+pad
+    if options.icon then
+        local size=floor(math.min(h*0.43,w*0.19))
+        self.glyphs[#self.glyphs+1]={icon=options.icon,x=text_x,y=y+floor((h-size)/2),size=size}
+        text_x=text_x+size+floor(pad/2)
+    end
+    self:label(text,text_x,y,x+w-pad-text_x,h,options.font or math.min(math.floor(h*0.34),self.hint_size),
+        {bold=options.bold,light=options.dark,align=options.align,wrap=options.wrap,fill=card.fill})
     return card
+end
+
+function Surface:tileGrid(choices,first,top,bottom,primary_count)
+    local w=self.dimen.w
+    local gap=self.gap
+    local side=floor(math.min((w-2*self.margin-3*gap)/4,(bottom-top-4*gap)/5))
+    local x0=floor((w-4*side-3*gap)/2)
+    local y0=top+floor((bottom-top-5*side-4*gap)/2)
+    local tiles={}
+    for index=first,math.min(first+19,#choices) do
+        local choice=choices[index]
+        local offset=index-first
+        local x=x0+offset%4*(side+gap)
+        local y=y0+floor(offset/4)*(side+gap)
+        local fill=index<first+primary_count and BB.COLOR_GRAY_E or BB.COLOR_WHITE
+        local tile=self:area(x,y,side,side,floor(side*0.17),fill,choice[2])
+        tile.icon=choice[3] or self.icon or "arrow"
+        tiles[#tiles+1]=tile
+        local size=floor(side*0.35)
+        self.glyphs[#self.glyphs+1]={icon=tile.icon,x=x+floor((side-size)/2),y=y+floor(side*0.11),size=size}
+        local pad=floor(side*0.075)
+        local font=math.min(self.hint_size,floor(side*0.123))
+        self:label(choice[1],x+pad,y+floor(side*0.49),side-2*pad,floor(side*0.44),
+            font,{bold=true,wrap=true,fill=fill})
+    end
+    return tiles
 end
 
 function Surface:header(title,subtitle,glyph,header_h)
     local edge=self.margin
     local size=math.min(self.hint_size*2,math.floor(header_h*0.35))
-    if glyph then self.glyphs[#self.glyphs+1]={icon=glyph,x=edge,y=edge,size=size} end
     local left=glyph and edge+size+self.gap or edge
-    local right=self.dimen.w-edge
     local body=header_h-edge-self.gap
     local title_h=subtitle and math.floor(body*0.62) or body
+    local home_w=floor((self.dimen.w-2*edge)*0.21)
+    local home_h=math.min(body,floor(self.hint_size*2.55))
+    local right=self.dimen.w-edge-home_w-self.gap
+    self:control("Trang chủ",right+self.gap,edge+floor((title_h-home_h)/2),home_w,home_h,
+        function() self.app:home() end,{icon="home",font=floor(self.hint_size*0.9),bold=true,wrap=true})
+    if glyph then
+        self.glyphs[#self.glyphs+1]={icon=glyph,x=edge,y=edge+floor((title_h-size)/2),size=size}
+    end
     self:label(title,left,edge,right-left,title_h,
         math.min(math.floor(title_h*0.47),self.title_size),{bold=true,align="left",wrap=true})
     if subtitle then
@@ -206,7 +255,7 @@ function Surface:onSetDimensions()
 end
 
 function Surface:onCloseSurface()
-    if self.back then self.back() else self.app:close() end
+    self.app:home()
     return true
 end
 

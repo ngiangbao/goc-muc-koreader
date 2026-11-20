@@ -20,7 +20,7 @@ function App:museMenu()
         table.insert(entries,2,{"Xem tin nhắn gần nhất",function() self:museReply(self.muse_job) end,"book"})
     end
     self:menu("Muse",entries,function() self:home() end,
-        {icon="muse",style="tiles",subtitle=url or "Cầu nối Muse Gadget SDK qua Tailscale"})
+        {icon="muse",subtitle=url or "Cầu nối Muse Gadget SDK qua Tailscale"})
 end
 
 function App:museSetup()

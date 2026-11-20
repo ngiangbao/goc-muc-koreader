@@ -1,4 +1,3 @@
-local BB = require("ffi/blitbuffer")
 local root = debug.getinfo(1,"S").source:gsub("^@",""):gsub("[/\\]home%.lua$","")
 local Surface = dofile(root.."/surface.lua")
 local Home = Surface:extend{}
@@ -10,10 +9,10 @@ local apps={
     {"Bé đọc","kidsMenu","book"}, {"Tiện ích","utilities","tools"},
     {"Tìm hợp âm","chordSearch","search"}, {"Lịch tháng","calendarThisMonth","calendar"},
     {"Thời tiết","weather","cloud"}, {"Giá vàng","gold","coin"},
-    {"Sudoku","sudokuMenu","caro"}, {"Việc cần làm","todo","list"},
-    {"Thói quen","habits","calendar"}, {"Tập trung","focus","clock"},
-    {"Từ vựng","words","book"}, {"Ghi chú","notes","news"},
-    {"Bấm giờ","stopwatch","clock"}, {"Muse","museMenu","muse"},
+    {"Sudoku","sudokuMenu","sudoku"}, {"Việc cần làm","todo","list"},
+    {"Thói quen","habits","calendar"}, {"Tập trung","focus","focus"},
+    {"Từ vựng","words","book"}, {"Ghi chú","notes","note"},
+    {"Bấm giờ","stopwatch","alarm"}, {"Muse","museMenu","muse"},
 }
 
 function Home:build()
@@ -38,27 +37,24 @@ function Home:build()
     self:label(self.lunar,margin+clock_w,date_y+floor(date_h/2),inner-clock_w,floor(date_h/2),
         math.min(self.hint_size,floor(date_h*0.31)),{align="right"})
 
-    self.tiles={}
+    local choices={}
     for index,item in ipairs(apps) do
-        local x=x0+(index-1)%4*(side+gap)
-        local y=y0+floor((index-1)/4)*(side+gap)
-        local tile=self:area(x,y,side,side,floor(side*0.17),
-            index<=8 and BB.COLOR_GRAY_E or BB.COLOR_WHITE,function() self.app[item[2]](self.app) end)
-        tile.icon=item[3]
-        self.tiles[#self.tiles+1]=tile
-        local size=floor(side*0.40)
-        self.glyphs[#self.glyphs+1]={icon=item[3],x=x+floor((side-size)/2),y=y+floor(side*0.12),size=size}
-        self:label(item[1],x+floor(side*0.08),y+floor(side*0.53),floor(side*0.84),floor(side*0.39),
-            math.min(self.hint_size,floor(side*0.135)),{bold=true,wrap=true})
+        choices[index]={item[1],function() self.app:openFeature(item[2],item[3]) end,item[3]}
     end
+    self.tiles=self:tileGrid(choices,1,header,h-footer,8)
 
-    local actions={{"Cập nhật","updates"},{"Giới thiệu","credits"},{"Về KOReader","close"}}
+    local actions={{"Cập nhật","updates","update"},{"Giới thiệu","credits","help"},{"Về KOReader","close","exit"}}
     local action_w=floor((inner-2*gap)/3)
     local action_h=math.min(floor(footer*0.66),self.hint_size*3)
     for i,item in ipairs(actions) do
         self:control(item[1],margin+(i-1)*(action_w+gap),h-footer+floor((footer-action_h)/2),
-            action_w,action_h,function() self.app[item[2]](self.app) end,{wrap=true})
+            action_w,action_h,function() self.app:openFeature(item[2],item[3]) end,{wrap=true,icon=item[3]})
     end
+end
+
+function Home:onCloseSurface()
+    self.app:close()
+    return true
 end
 
 function Home:onSurfaceResize()

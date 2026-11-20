@@ -15,7 +15,7 @@ function App:newsMenu()
     for _,source in ipairs(sources) do
         choices[#choices+1]={source[1],function() self:newsLoad(source) end,"news"}
     end
-    self:menu("Đọc báo",choices,function() self:home() end,{style="tiles",icon="news"})
+    self:menu("Đọc báo",choices,function() self:home() end,{icon="news"})
 end
 
 function App:newsLoad(source,force)
@@ -47,7 +47,7 @@ function App:newsList(source,data)
     for i,entry in ipairs(data.entries) do
         choices[#choices+1]={entry.title,function() self:newsArticle(source,data,i) end}
     end
-    self:menu(source[1],choices,function() self:newsMenu() end,{style="list",icon="news",subtitle=subtitle})
+    self:menu(source[1],choices,function() self:newsMenu() end,{icon="news",subtitle=subtitle})
 end
 
 function App:newsArticle(source,data,index,full)
@@ -177,7 +177,7 @@ function App:weatherLocation(ts)
                     self:weather(ts)
                 end}
             end
-            self:menu("Chọn địa điểm",choices,function() self:calendar(ts) end,{icon="cloud",style="list"})
+            self:menu("Chọn địa điểm",choices,function() self:calendar(ts) end,{icon="cloud"})
         end)
     end)
 end

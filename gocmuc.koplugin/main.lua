@@ -55,9 +55,15 @@ function App:button(text,action,fields)
     return item
 end
 
+function App:openFeature(method,icon)
+    self.feature_icon=icon
+    self[method](self)
+end
+
 function App:openPage(kind,options)
     self:close()
     options.app=self
+    options.icon=options.icon or self.feature_icon or "tools"
     local window=Pages[kind]:new(options)
     self.window=window
     UI:show(window)
@@ -73,7 +79,7 @@ end
 
 function App:menu(title, choices, back, options, page)
     options=options or {}
-    return self:openPage("Menu",{title=title,choices=choices,back=back,style=options.style,
+    return self:openPage("Menu",{title=title,choices=choices,back=back,
         subtitle=options.subtitle,icon=options.icon,page=page,
         redraw=function(next_page) self:menu(title,choices,back,options,next_page) end})
 end
@@ -90,6 +96,15 @@ local function styleButtons(table_widget)
     end
 end
 
+local native_icons={
+    book="book.opened", news="appbar.pageview", note="edit", muse="appbar.navigation",
+    music="appbar.typeset", search="appbar.search", help="info", update="cre.render.reload",
+}
+
+function App:sectionIcon(icon)
+    return native_icons[icon or self.feature_icon] or "appbar.tools"
+end
+
 function App:view(title,text,back,options)
     self:close()
     options=options or {}
@@ -97,23 +112,32 @@ function App:view(title,text,back,options)
     local function leave()
         if self.window==window then self.window=nil end
         UI:close(window)
-        if back then UI:nextTick(back) end
+        UI:nextTick(back or function() self:home() end)
     end
     local rows={}
     for _,row in ipairs(options.rows or {}) do rows[#rows+1]=row end
-    rows[#rows+1]={{text="‹ Quay lại",callback=leave}}
+    rows[#rows+1]={
+        {text="‹ Quay lại",callback=leave},
+        {text="Trang chủ",callback=function() self:home() end},
+    }
     local border=2*Size.border.window
     window=TextViewer:new{title=title,title_multilines=true,title_face=Font:getFace("ffont",24),
         width=Screen:getWidth()-border,height=Screen:getHeight()-border,
-        covers_fullscreen=true,text=text,show_menu=false,
+        covers_fullscreen=true,text=text,show_menu=true,
         text_format="txt",buttons_table=rows,page_turn_callback_prev=options.prev,page_turn_callback_next=options.next,
         close_callback=function()
             if self.window==window then
                 self.window=nil
-                if back then UI:nextTick(back) end
+                UI:nextTick(function() self:home() end)
             end
         end}
     if window.frame then window.frame.radius=0 end
+    if window.titlebar and window.titlebar.left_button then
+        local icon=window.titlebar.left_button
+        icon:setIcon(self:sectionIcon(options.icon))
+        icon.callback=nil
+        window.onShowMenu=function() return true end
+    end
     styleButtons(window.button_table)
     self.window=window
     UI:show(window)
@@ -124,8 +148,13 @@ function App:prompt(title, desc, initial, cb, options)
     local panel
     panel=InputDialog:new{
         title=title,description=desc,input=initial or "",input_type=options.number and "number" or nil,
+        title_bar_left_icon=self:sectionIcon(options.icon or "note"),
         fullscreen=true,
         allow_newline=options.multiline or false,buttons={{{text="Hủy",callback=function() UI:close(panel) end},
+        {text="Trang chủ",callback=function()
+            UI:close(panel)
+            self:home()
+        end},
         {text=options.action or "OK",is_enter_default=not options.multiline,callback=function()
             local value=panel:getInputText():match("^%s*(.-)%s*$")
             UI:close(panel)
@@ -174,6 +203,8 @@ end
 function App:home()
     local date=os.date("*t")
     local ok,power=pcall(function() return Device:getPowerDevice():getCapacity() end)
+    self.feature_icon=nil
+    self.active_quiz=nil
     self:close()
     local window=Home:new{
         app=self,clock=os.date("%H:%M"),date=os.date("%d/%m/%Y"),
@@ -182,9 +213,15 @@ function App:home()
     }
     self.window=window
     UI:show(window)
-    UI:scheduleIn(60-date.sec,function()
-        if self.window==window then self:home() end
-    end)
+    local function tick()
+        if self.window~=window then return end
+        if UI.getTopmostVisibleWidget and UI:getTopmostVisibleWidget()~=window then
+            UI:scheduleIn(30,tick)
+            return
+        end
+        self:home()
+    end
+    UI:scheduleIn(60-date.sec,tick)
 end
 
 function App:credits()

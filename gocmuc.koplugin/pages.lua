@@ -16,54 +16,18 @@ function Menu:build()
     local inner=w-2*edge
     self:header(self.title,self.subtitle,self.icon,header)
 
-    local list=self.style=="list" or (#self.choices>7 and self.style~="tiles")
-    if not list and not self.style then
-        for _,item in ipairs(self.choices) do
-            if #item[1]:gsub("[\128-\191]","")>26 then list=true; break end
-        end
-    end
-    local per_page=list and math.max(3,math.min(7,floor(area/(self.hint_size*3.2)))) or 4
+    local per_page=20
     self.page_count=math.max(1,math.ceil(#self.choices/per_page))
     self.page=math.max(1,math.min(self.page or 1,self.page_count))
     local first=(self.page-1)*per_page+1
-    local count=math.min(per_page,#self.choices-first+1)
-    if count==0 then
+    self.tiles=self:tileGrid(self.choices,first,header,h-footer-gap,4)
+    if #self.tiles==0 then
         self:label("Chưa có mục",edge,header,inner,area,self.hint_size)
-    elseif list then
-        local step=floor((area+gap)/per_page)
-        for index=1,count do
-            local choice=self.choices[first+index-1]
-            local x,y=edge,header+(index-1)*step
-            local height=step-gap
-            self:area(x,y,inner,height,self.round,BB.COLOR_GRAY_E,choice[2])
-            local icon_size=floor(math.min(height*0.38,self.hint_size*1.25))
-            local icon_x=x+inner-2*gap-icon_size
-            self.glyphs[#self.glyphs+1]={icon=choice[3] or "arrow",x=icon_x,y=y+floor((height-icon_size)/2),size=icon_size}
-            self:label(choice[1],x+2*gap,y,icon_x-x-3*gap,height,
-                math.min(self.hint_size*1.11,floor(height*0.28)),{align="left",bold=true,wrap=true})
-        end
-    else
-        local side=floor(math.min((inner-gap)/2,(area-gap)/2))
-        local x0=floor((w-2*side-gap)/2)
-        local rows=math.ceil(count/2)
-        local y0=header+floor((area-rows*side-(rows-1)*gap)/2)
-        for index=1,count do
-            local choice=self.choices[first+index-1]
-            local x=x0+((index-1)%2)*(side+gap)
-            if index==count and count%2==1 then x=floor((w-side)/2) end
-            local y=y0+floor((index-1)/2)*(side+gap)
-            self:area(x,y,side,side,floor(side*0.16),index==1 and BB.COLOR_GRAY_E or BB.COLOR_WHITE,choice[2])
-            local icon_size=floor(side*0.35)
-            self.glyphs[#self.glyphs+1]={icon=choice[3] or self.icon or "arrow",
-                x=x+floor((side-icon_size)/2),y=y+floor(side*0.15),size=icon_size}
-            self:label(choice[1],x+gap,y+floor(side*0.55),side-2*gap,floor(side*0.34),
-                math.min(self.title_size*0.74,floor(side*0.116)),{bold=true,wrap=true})
-        end
     end
 
     local y,h_nav=h-footer+floor(gap/2),footer-floor(gap/2)-edge
     local back_w=self.page_count>1 and floor(inner*0.40) or inner
-    self:control("‹ Quay lại",edge,y,back_w,h_nav,function() self:onCloseSurface() end,{bold=true})
+    self:control("‹ Quay lại",edge,y,back_w,h_nav,self.back,{bold=true})
     if self.page_count>1 then
         local nav_w=floor((inner-back_w-2*gap)/3)
         local x=edge+back_w+gap
@@ -127,7 +91,7 @@ function Controls:build()
     end
     if self.back then
         self:control(self.back_text or "‹ Quay lại",edge,h-footer,inner,footer-edge,
-            function() self:onCloseSurface() end,{bold=true})
+            self.back,{bold=true})
     end
 end
 
@@ -157,8 +121,8 @@ function Calendar:day()
     local side=floor((inner-gap)/2)
     local date_h=floor(h*0.30)
     local x2=edge+side+gap
-    self:area(edge,head,side,date_h,self.round*2,BB.COLOR_GRAY_E)
-    self:area(x2,head,side,date_h,self.round*2,BB.COLOR_WHITE)
+    local solar=self:area(edge,head,side,date_h,self.round*2,BB.COLOR_GRAY_E)
+    local lunar=self:area(x2,head,side,date_h,self.round*2,BB.COLOR_WHITE)
     local text_h=floor(date_h*0.24)
     local number_h=floor(date_h*0.48)
     self:label("DƯƠNG LỊCH",edge+gap,head,side-2*gap,text_h,self.hint_size,{bold=true})
@@ -168,9 +132,9 @@ function Calendar:day()
     self:label(string.format("%02d",info.lunar_day),x2+gap,head+text_h,side-2*gap,number_h,big,{bold=true})
     local details_y=head+text_h+number_h
     self:label("Tháng "..info.month.." · "..info.year,edge+gap,details_y,side-2*gap,text_h,
-        self.hint_size,{bold=true,wrap=true})
+        self.hint_size,{bold=true,wrap=true,fill=solar.fill})
     self:label("Tháng "..info.lunar_month..(info.leap and " nhuận" or "").." · "..info.lunar_year,
-        x2+gap,details_y,side-2*gap,text_h,self.hint_size,{wrap=true})
+        x2+gap,details_y,side-2*gap,text_h,self.hint_size,{wrap=true,fill=lunar.fill})
     local hours_y=head+date_h+gap
     local footer_y=floor(h*0.79)
     local hours_h=footer_y-hours_y-gap
@@ -190,10 +154,6 @@ function Calendar:day()
     self:footer({"Lịch tháng","Thời tiết","Giá vàng"},{self.open_month,self.weather,self.gold},footer_y,row_h)
     self:footer({"‹ Hôm trước","Hôm nay","Hôm sau ›"},{self.previous,self.today,self.next},
         footer_y+row_h+gap,row_h,2)
-    self:label("‹ Quay lại",edge,footer_y+2*row_h+gap,inner,h-footer_y-2*row_h-gap,
-        self.hint_size,{bold=true})
-    self.targets[#self.targets+1]={x=edge,y=footer_y+2*row_h+gap,w=inner,
-        h=h-footer_y-2*row_h-gap,callback=self.back}
 end
 
 function Calendar:month()

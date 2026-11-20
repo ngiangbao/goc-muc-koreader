@@ -93,6 +93,12 @@ for _,tile in ipairs(app.window.tiles) do
     assert(tile.x>=0 and tile.y+tile.h<=screen_h and tile.x+tile.w<=screen_w)
     seen_x[tile.x],seen_y[tile.y]=true,true
 end
+local function labelFor(window,text)
+    for _,label in ipairs(window.labels) do
+        if label.widget.text==text then return label.widget end
+    end
+end
+assert(labelFor(app.window,"Cờ vua").bgcolor==app.window.tiles[1].fill)
 local x_count,y_count=0,0
 for _ in pairs(seen_x) do x_count=x_count+1 end
 for _ in pairs(seen_y) do y_count=y_count+1 end
@@ -114,19 +120,24 @@ screen_w,screen_h=1072,1448
 
 app:chessMenu()
 app.window:paintTo(bb,0,0)
+assert(labelFor(app.window,"Cờ vua T4\nHoàng Tuấn").bgcolor==app.window.tiles[1].fill)
+local nav=app.window.targets[1]
+app.window:onTileTap(nil,{pos={x=nav.x+nav.w/2,y=nav.y+nav.h/2}})
+assert(#app.window.tiles==20)
+app:chessMenu()
 app.window.choices[1][2]()
 assert(app.window.text:find("hoangtuan2k5",1,true))
 local tab
 adapter["t4-e-reader-os"]={open=function(_,name) tab=name end}
 app:openT4("chess")
-assert(tab=="chess" and not app.window)
+assert(tab=="chess" and #app.window.tiles==20)
 app:updates()
 app.window.choices[2][2]()
-assert(tab=="settings" and not app.window)
+assert(tab=="settings" and #app.window.tiles==20)
 local opened=false
 adapter.ink_knight={addToMainMenu=function(_,menu) menu.ink_knight={callback=function() opened=true end} end}
 app:openInkKnight()
-assert(opened)
+assert(opened and #app.window.tiles==20)
 
 app:kidsLevels()
 app.window.choices[1][2]()
@@ -152,6 +163,8 @@ for i=3,6 do
 end
 app.window.buttons[7][7].callback()
 assert(app.window.title:find("X thắng",1,true))
+app.window:onCloseSurface()
+assert(#app.window.tiles==20)
 
 app:chordMenu()
 app.window.choices[4][2]()
@@ -172,7 +185,7 @@ assert(song.title=="Tên bài thử" and song.body=="[C#m7]  [D/F#]")
 app:chordMenu()
 app.window.choices[1][2]()
 assert(shown.fullscreen)
-shown.buttons[1][2].callback()
+shown.buttons[1][3].callback()
 assert(app.window.title=="Kết quả tìm bài hát")
 assert(app.window.choices[2][1]=="Tên bài thử\nTác giả thử")
 app.window.choices[2][2]()
@@ -184,20 +197,28 @@ local items=Net.rss(xml)
 assert(#items==1 and items[1].title=="A & B" and items[1].text=="Some notes")
 assert(Net.article("<article><p>Hello <strong>from</strong> a tested article here.</p></article>"))
 app:newsMenu()
-assert(app.window.covers_fullscreen and app.window.page_count==2)
+assert(app.window.covers_fullscreen and #app.window.tiles==6 and app.window.page_count==1)
 app.window.choices[2][2]()
 app.window.choices[2][2]()
 assert(app.window.text:find("Some notes",1,true))
 assert(app.window.covers_fullscreen and app.window.width==screen_w-4)
+app.window.close_callback()
+assert(#app.window.tiles==20)
 
 app:utilities()
-assert(#app.window.choices==15 and app.window.page_count>1)
+assert(#app.window.tiles==15 and app.window.page_count==1)
+local choices={}
+for i=1,21 do choices[i]={"Bài "..i,function() end,"news"} end
+app:menu("Nhiều bài",choices,function() app:home() end)
+assert(#app.window.tiles==20 and app.window.page_count==2)
 app.window:onTileSwipe(nil,{direction="west"})
-assert(app.window.page==2)
+assert(app.window.page==2 and #app.window.tiles==1)
 local today=os.time{year=2026,month=11,day=21,hour=12}
 app:calendar(today)
 app.window:paintTo(bb,0,0)
 assert(app.window.covers_fullscreen and app.window.day_info.day==21 and #app.window.day_info.hours==6)
+assert(labelFor(app.window,"Hôm nay").bgcolor==require("ffi/blitbuffer").COLOR_BLACK)
+assert(labelFor(app.window,"Tháng 11 · 2026").bgcolor==require("ffi/blitbuffer").COLOR_GRAY_E)
 app.window.open_month()
 app.window:paintTo(bb,0,0)
 assert(app.window.month_info.month==11 and #app.window.month_info.days==30)
@@ -210,4 +231,6 @@ app:museMenu()
 assert(app.window.title=="Muse" and app.window.covers_fullscreen)
 app.window.choices[3][2]()
 assert(shown.title=="Địa chỉ cầu nối Muse" and shown.fullscreen)
-print("KOReader widget mocks: 4 × 5 home, fullscreen pages, calendar, news, chord search/import, games and Muse setup passed.")
+shown.buttons[1][2].callback()
+assert(#app.window.tiles==20)
+print("KOReader widget mocks: 4 × 5 menus, matched text background, app exits, calendar, news, chord search and Muse passed.")

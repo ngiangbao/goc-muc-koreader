@@ -3,17 +3,17 @@ local UI=env.UI
 
 function App:utilities()
     local groups={
-        {"Việc cần làm","todo","list"},{"Thói quen","habits","calendar"},{"Đồng hồ tập trung","focus","clock"},
-        {"Từ vựng Anh–Việt","words","book"},{"Sudoku","sudokuMenu","caro"},{"Ghi chú","notes","news"},
-        {"Bấm giờ","stopwatch","clock"},{"Đếm ngược","countdown","clock"},{"Đổi đơn vị","convert","math"},
+        {"Việc cần làm","todo","list"},{"Thói quen","habits","calendar"},{"Đồng hồ tập trung","focus","focus"},
+        {"Từ vựng Anh–Việt","words","book"},{"Sudoku","sudokuMenu","sudoku"},{"Ghi chú","notes","note"},
+        {"Bấm giờ","stopwatch","alarm"},{"Đếm ngược","countdown","clock"},{"Đổi đơn vị","convert","math"},
         {"Máy tính","calculate","math"},{"Xúc xắc","dice","dice"},{"Tung đồng xu","coin","coin"},
         {"Bốc số","randomNumber","dice"},{"Thẻ tự tạo","flashcards","book"},{"Theo dõi nước uống","water","water"},
     }
     local choices={}
     for _,item in ipairs(groups) do
-        choices[#choices+1]={item[1],function() self[item[2]](self) end,item[3]}
+        choices[#choices+1]={item[1],function() self:openFeature(item[2],item[3]) end,item[3]}
     end
-    self:menu("Tiện ích",choices,function() self:home() end,{icon="tools",style="list"})
+    self:menu("Tiện ích",choices,function() self:home() end,{icon="tools"})
 end
 
 function App:setList(key,title,kind)
@@ -106,7 +106,7 @@ function App:timer(title,deadline,done)
     if remain<=0 then done(); return end
     local function refresh() self:timer(title,deadline,done) end
     local window=self:show(title.."\n"..clock(remain),
-        {{self:button("Làm mới",refresh)}},function() self:utilities() end,{back_text="Dừng"})
+        {{self:button("Làm mới",refresh)}},function() self:home() end,{back_text="Dừng"})
     UI:scheduleIn(math.min(10,remain),function() if self.window==window then refresh() end end)
 end
 

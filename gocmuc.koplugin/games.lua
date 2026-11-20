@@ -19,7 +19,7 @@ function App:chessMenu()
         {"Cờ vua T4\nHoàng Tuấn",function() self:openT4("chess") end,"knight"},
         {"Cờ vua cho bé\n6 mức",function() self:kidsChessMenu() end,"book"},
         {"Đấu Lichess\nInk Knight",function() self:openInkKnight() end,"link"},
-    },function() self:home() end,{icon="knight",style="tiles"})
+    },function() self:home() end,{icon="knight"})
 end
 
 function App:openT4(tab)
@@ -36,7 +36,7 @@ function App:openT4(tab)
             back)
         return
     end
-    self:close()
+    self:home()
     UI:nextTick(function()
         local ok,err=pcall(t4.open,t4,tab)
         if not ok then
@@ -52,7 +52,7 @@ function App:openInkKnight()
     local menu={}
     if ink and type(ink.addToMainMenu)=="function" then ink:addToMainMenu(menu) end
     if menu.ink_knight and menu.ink_knight.callback then
-        self:close()
+        self:home()
         UI:nextTick(menu.ink_knight.callback)
     else
         self:view("Chơi qua Lichess",
@@ -316,7 +316,7 @@ function App:sudokuMenu()
             self:sudokuGame(game)
         end}
     end
-    self:menu("Sudoku",choices,function() self:utilities() end,{icon="caro"})
+    self:menu("Sudoku",choices,function() self:utilities() end,{icon="sudoku"})
 end
 
 function App:sudokuGame(game)
