@@ -2,6 +2,8 @@
 
 Góc Mực là plugin tiếng Việt của [@ngiangbao](https://github.com/ngiangbao), hướng tới Kindle Basic 2024 đã jailbreak và cài KOReader. Plugin mở một trang riêng từ menu KOReader. Cảm hứng đến từ [bài chia sẻ về góc học tập trên Kindle của Nguyễn Việt An](https://www.facebook.com/share/p/1CY1kR7tiE/).
 
+Trang chủ hiển thị các ô vuông bo góc với biểu tượng đen trắng. Chạm **Học & chơi** hoặc **Hằng ngày**, hoặc vuốt ngang để chuyển trang.
+
 ## Cài đặt
 
 1. Tải gói ZIP mới nhất ở [trang phát hành](https://github.com/ngiangbao/goc-muc-koreader/releases/latest).

@@ -2,7 +2,6 @@ local BB = require("ffi/blitbuffer")
 local ButtonDialog = require("ui/widget/buttondialog")
 local DataStorage = require("datastorage")
 local Device = require("device")
-local Font = require("ui/font")
 local InfoMessage = require("ui/widget/infomessage")
 local InputDialog = require("ui/widget/inputdialog")
 local LuaSettings = require("luasettings")
@@ -153,25 +152,24 @@ function App:grid(size, title, rows, render, back)
 end
 
 local Lunar=dofile(root.."/lunar.lua")
+local Home=dofile(root.."/home.lua")
 local extras={Lunar=Lunar,root=root,UI=UI,version=version}
 for _,file in ipairs({"games","learn","daily","utilities","updates"}) do
     dofile(root.."/"..file..".lua")(App,extras)
 end
 
-function App:home()
+function App:home(page)
     local date=os.date("*t")
     local ok,power=pcall(function() return Device:getPowerDevice():getCapacity() end)
-    local title=os.date("%H:%M").."\nGóc Mực\n"..os.date("%d/%m/%Y").."  ·  "..(ok and power and power.."%" or "Pin —")
-        .."\n"..Lunar.label(date.day,date.month,date.year)
-    local function b(label,name) return self:button(label,function() self[name](self) end,{font_size=17,height=Screen:scaleBySize(47)}) end
-    local window=self:show(title,{
-        {b("Cờ vua","chessMenu"),b("Toán tư duy","mathMenu")},
-        {b("Cờ caro","caroMenu"),b("Đọc báo","newsMenu")},
-        {b("Lịch để bàn","calendar"),b("Hợp âm","chordMenu")},
-        {b("Bé đọc","kidsMenu"),b("Tiện ích","utilities")},
-        {b("Cập nhật","updates"),b("Giới thiệu","credits")},
-        {b("Về KOReader","close")},
-    },nil,{title_face=Font:getFace("smalltfont",23)})
+    self.home_page=page or self.home_page or 1
+    self:close()
+    local window=Home:new{
+        app=self,page=self.home_page,clock=os.date("%H:%M"),date=os.date("%d/%m/%Y"),
+        lunar="Âm "..Lunar.label(date.day,date.month,date.year),
+        battery=ok and power and "Pin "..power.."%" or "Pin —",
+    }
+    self.window=window
+    UI:show(window)
     UI:scheduleIn(60-date.sec,function()
         if self.window==window then self:home() end
     end)
