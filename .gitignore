@@ -1,0 +1,7 @@
+node_modules/
+*.log
+*.zip
+.env
+.env.*
+secrets.lua
+gocmuc.lua

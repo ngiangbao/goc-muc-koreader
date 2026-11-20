@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cờ caro · Góc Mực</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:24px 12px;background:#faf9f5;color:#151515;font:16px system-ui,sans-serif}
+main{max-width:560px;margin:auto}
+h1{font-family:Georgia,serif;font-size:38px;font-weight:normal;margin:6px 0 16px}
+form{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+button,input{font:inherit;border:1px solid #151515;color:inherit;background:#fff;border-radius:4px;padding:10px}
+button:focus-visible,input:focus-visible{outline:2px solid #111;outline-offset:2px}
+button{cursor:pointer}
+input{width:9ch;text-transform:uppercase}
+#board{display:grid;grid-template-columns:repeat(13,1fr);border-top:1px solid #444;border-left:1px solid #444}
+#board:empty{display:none}
+#board button{padding:0;aspect-ratio:1;border:0;border-right:1px solid #444;border-bottom:1px solid #444;border-radius:0;font-weight:700}
+#board button.last{background:#dadada}
+#board button:disabled{cursor:default}
+#status{min-height:1.5em}
+#new{background:#151515;color:white}
+</style>
+<script src="/room-ui.js" defer></script>
+</head>
+<body>
+<main>
+<h1>Cờ caro</h1>
+<form id="lobby">
+<button id="new" type="button">Tạo phòng</button>
+<input name="code" id="code" maxlength="6" autocomplete="off" placeholder="Mã phòng" aria-label="Mã phòng" required>
+<button type="submit">Vào phòng</button>
+</form>
+<p id="status" role="status">Tạo phòng hoặc nhập mã từ Kindle.</p>
+<div id="board" aria-label="Bàn cờ 13 × 13"></div>
+</main>
+</body>
+</html>
