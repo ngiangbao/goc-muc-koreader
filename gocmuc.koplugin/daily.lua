@@ -143,7 +143,7 @@ end
 
 function App:weather()
     self:online(function()
-        local loc=self:read("weather_location",{name="Đà Nẵng",lat=16.07,lon=108.22})
+        local loc=self:read("weather_location",{name="TP Hồ Chí Minh",lat=10.7769,lon=106.7009})
         local url="https://api.open-meteo.com/v1/forecast?latitude="..loc.lat.."&longitude="..loc.lon
             .."&current=temperature_2m,weather_code&daily=weather_code,temperature_2m_min,temperature_2m_max,precipitation_probability_max&timezone=auto&forecast_days=4"
         local data,err=Net.json(url)
@@ -163,7 +163,7 @@ function App:weather()
 end
 
 function App:weatherLocation()
-    self:prompt("Địa điểm","Ví dụ Hà Nội, Đà Nẵng hoặc Sydney.","",function(query)
+    self:prompt("Địa điểm","Ví dụ TP Hồ Chí Minh, Hà Nội hoặc Sydney.","",function(query)
         if query=="" then return end
         self:online(function()
             local data,err=Net.json("https://geocoding-api.open-meteo.com/v1/search?count=6&language=vi&name="..Net.escape(query))

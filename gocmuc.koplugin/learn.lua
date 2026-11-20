@@ -1,5 +1,7 @@
 return function(App,env)
 local Quiz=dofile(env.root.."/mathquiz.lua")
+local Net=dofile(env.root.."/net.lua")
+local HAC=dofile(env.root.."/hopamchuan.lua")
 local UI=env.UI
 
 function App:mathMenu()
@@ -184,7 +186,7 @@ function App:chordMenu()
                 self:chordMenu()
             end,{multiline=true})
         end)
-    end}}
+    end},{"Nhập từ Hợp Âm Chuẩn",function() self:importChords() end}}
     for _,list in ipairs({samples,self:read("chords",{})}) do
         for _,song in ipairs(list) do
             choices[#choices+1]={song.title,function() self:chordView(song,0) end}
@@ -193,8 +195,34 @@ function App:chordMenu()
     self:menu("Hợp âm",choices,function() self:home() end)
 end
 
+function App:importChords()
+    self:prompt("Nhập từ Hợp Âm Chuẩn",
+        "Dán link bài hát dạng https://hopamchuan.com/song/…. Góc Mực lưu ký hiệu hợp âm theo dòng.",
+        "",function(value)
+            local url=HAC.url(value)
+            if not url then self:notice("Hãy nhập link một bài hát từ hopamchuan.com."); return end
+            self:online(function()
+                local html,err=Net.request(url)
+                if not html then self:notice(err); return end
+                local song,message=HAC.parse(html,Net.clean)
+                if not song then self:notice(message); return end
+                song.source=url
+                local saved=self:read("chords",{})
+                local index=#saved+1
+                for i,entry in ipairs(saved) do
+                    if entry.source==url then index=i; break end
+                end
+                saved[index]=song
+                self:save("chords",saved)
+                self:chordView(song,0)
+            end)
+        end,{action="Nhập hợp âm"})
+end
+
 function App:chordView(song,steps)
-    self:view(song.title.." · "..string.format("%+d",steps),transpose(song.body,steps),function() self:chordMenu() end,{
+    local body=transpose(song.body,steps)
+    if song.source then body=body.."\n\nNguồn: Hợp Âm Chuẩn\n"..song.source end
+    self:view(song.title.." · "..string.format("%+d",steps),body,function() self:chordMenu() end,{
         rows={{self:button("− Nửa tông",function() self:chordView(song,steps-1) end),
             self:button("Giọng gốc",function() self:chordView(song,0) end),
             self:button("+ Nửa tông",function() self:chordView(song,steps+1) end)}},

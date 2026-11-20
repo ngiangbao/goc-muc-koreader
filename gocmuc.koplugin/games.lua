@@ -16,13 +16,16 @@ end
 
 function App:chessMenu()
     self:menu("Cờ vua",{
-        {"Cờ vua T4 · Hoàng Tuấn",function() self:openChessT4() end},
+        {"Cờ vua T4 · Hoàng Tuấn",function() self:openT4("chess") end},
         {"Cờ vua cho bé · 6 mức",function() self:kidsChessMenu() end},
         {"Đấu Lichess · Ink Knight",function() self:openInkKnight() end},
     },function() self:home() end)
 end
 
-function App:openChessT4()
+function App:openT4(tab)
+    local function back()
+        if tab=="settings" then self:updates() else self:chessMenu() end
+    end
     local t4=installed(self,"t4-e-reader-os")
     if not t4 or type(t4.open)~="function" then
         self:view("Cài T4 e-reader OS",
@@ -30,15 +33,15 @@ function App:openChessT4()
             .."Tải bản Online hoặc Offline từ:\ngithub.com/hoangtuan2k5/t4-e-reader-os-releases/releases/latest\n\n"
             .."Chép t4-e-reader-os.koplugin vào cùng thư mục plugins với Góc Mực. Khởi động lại KOReader và vào lại mục này. "
             .."T4 có Stockfish, kho bài thế, phân tích ván và sảnh cờ trực tuyến.",
-            function() self:chessMenu() end)
+            back)
         return
     end
     self:close()
     UI:nextTick(function()
-        local ok,err=pcall(t4.open,t4,"chess")
+        local ok,err=pcall(t4.open,t4,tab)
         if not ok then
             log.warn("Goc Muc: T4 chess:",err)
-            self:chessMenu()
+            back()
             self:notice("T4 chưa mở được. Xem crash.log hoặc thử mở T4 từ menu KOReader.")
         end
     end)

@@ -13,7 +13,7 @@ local widget={new=function(_,t) return t end}
 local package_modules={
     ["ffi/blitbuffer"]={COLOR_GRAY_D=1,COLOR_WHITE=0},
     ["ui/widget/buttondialog"]=widget,["ui/widget/textviewer"]=widget,
-    ["ui/widget/infomessage"]=widget,
+    ["ui/widget/infomessage"]=widget,["ui/widget/confirmbox"]=widget,
     ["ui/widget/inputdialog"]={new=function(_,t) t.onShowKeyboard=function() end; return t end},
     ["datastorage"]={getSettingsDir=function() return "." end},
     ["device"]={screen=screen,getPowerDevice=function()
@@ -54,8 +54,11 @@ app.window.buttons[1][1].callback()
 assert(app.window.text:find("hoangtuan2k5",1,true))
 local tab
 adapter["t4-e-reader-os"]={open=function(_,name) tab=name end}
-app:openChessT4()
+app:openT4("chess")
 assert(tab=="chess" and not app.window)
+app:updates()
+app.window.buttons[2][1].callback()
+assert(tab=="settings" and not app.window)
 local opened=false
 adapter.ink_knight={addToMainMenu=function(_,menu) menu.ink_knight={callback=function() opened=true end} end}
 app:openInkKnight()
@@ -87,12 +90,21 @@ app.window.buttons[7][7].callback()
 assert(app.window.title:find("X thắng",1,true))
 
 app:chordMenu()
-app.window.buttons[2][1].callback()
+app.window.buttons[3][1].callback()
 app.window.buttons_table[1][3].callback()
 assert(app.window.text:find("[C#]",1,true))
 assert(app.window.text:find("[C#/F]",1,true))
 
 local Net=dofile(root.."/net.lua")
+local HAC=dofile(root.."/hopamchuan.lua")
+assert(not HAC.url("https://hopamchuan.com.evil.test/song/12/example"))
+assert(not HAC.url("https://hopamchuan.com/song/12/../../example"))
+assert(HAC.url("https://hopamchuan.com/song/123/test/?fbclid=example")=="https://hopamchuan.com/song/123/test/")
+local page='<h1 id="song-title"><span>Tên bài thử</span></h1>'
+    ..'<div class="chord_lyric_line">Một lời thử <span class="hopamchuan_chord">C#m7</span> '
+    ..'<span class="hopamchuan_chord">D/F#</span></div>'
+local song=assert(HAC.parse(page,Net.clean))
+assert(song.title=="Tên bài thử" and song.body=="[C#m7]  [D/F#]")
 local xml=assert(Net.request("https://example.com/feed"))
 local items=Net.rss(xml)
 assert(#items==1 and items[1].title=="A & B" and items[1].text=="Some notes")

@@ -14,6 +14,7 @@ local Widget = require("ui/widget/container/widgetcontainer")
 local Screen = Device.screen
 
 local root = debug.getinfo(1,"S").source:gsub("^@",""):gsub("[/\\]main%.lua$","")
+local version = dofile(root.."/_meta.lua").version
 local App = Widget:extend{name="gocmuc",is_doc_only=false}
 
 function App:init()
@@ -152,8 +153,8 @@ function App:grid(size, title, rows, render, back)
 end
 
 local Lunar=dofile(root.."/lunar.lua")
-local extras={Lunar=Lunar,root=root,UI=UI}
-for _,file in ipairs({"games","learn","daily","utilities"}) do
+local extras={Lunar=Lunar,root=root,UI=UI,version=version}
+for _,file in ipairs({"games","learn","daily","utilities","updates"}) do
     dofile(root.."/"..file..".lua")(App,extras)
 end
 
@@ -168,7 +169,8 @@ function App:home()
         {b("Cờ caro","caroMenu"),b("Đọc báo","newsMenu")},
         {b("Lịch để bàn","calendar"),b("Hợp âm","chordMenu")},
         {b("Bé đọc","kidsMenu"),b("Tiện ích","utilities")},
-        {b("Giới thiệu","credits"),b("Về KOReader","close")},
+        {b("Cập nhật","updates"),b("Giới thiệu","credits")},
+        {b("Về KOReader","close")},
     },nil,{title_face=Font:getFace("smalltfont",23)})
     UI:scheduleIn(60-date.sec,function()
         if self.window==window then self:home() end
@@ -177,10 +179,11 @@ end
 
 function App:credits()
     self:view("Giới thiệu Góc Mực",
-        "Góc Mực · 0.1.0\nDự án của @ngiangbao.\n\nCảm hứng: bài chia sẻ về góc học tập trên Kindle của Nguyễn Việt An.\n\n"
+        "Góc Mực · "..version.."\nDự án của @ngiangbao.\n\nCảm hứng: bài chia sẻ về góc học tập trên Kindle của Nguyễn Việt An.\n\n"
         .."Cờ vua · T4 e-reader OS do Hoàng Tuấn (@hoangtuan2k5) phát triển. Cảm ơn tác giả đã phát hành T4 cho cộng đồng Kindle.\n"
         .."github.com/hoangtuan2k5/t4-e-reader-os-releases\n\n"
         .."Tùy chọn Lichess: Ink Knight của Beater Studios.\n"
+        .."Hợp âm: nhập ký hiệu theo URL từ Hợp Âm Chuẩn.\n"
         .."Lịch âm: phương pháp thiên văn do Hồ Ngọc Đức công bố.\nDự báo: Open-Meteo. Giá vàng: Vang.today.",
         function() self:home() end)
 end

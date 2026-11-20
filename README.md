@@ -4,7 +4,7 @@ Góc Mực là plugin tiếng Việt của [@ngiangbao](https://github.com/ngian
 
 ## Cài đặt
 
-1. Tải `goc-muc-koreader-v0.1.0.zip` ở [trang phát hành](https://github.com/ngiangbao/goc-muc-koreader/releases/latest).
+1. Tải gói ZIP mới nhất ở [trang phát hành](https://github.com/ngiangbao/goc-muc-koreader/releases/latest).
 2. Thoát KOReader về giao diện Kindle rồi cắm cáp USB. Mở bộ nhớ Kindle trên máy tính.
 3. Giải nén và chép thư mục `gocmuc.koplugin` vào `koreader/plugins/`. File cần nằm ở `koreader/plugins/gocmuc.koplugin/main.lua`.
 4. Ngắt USB, mở lại KOReader và chọn **Công cụ → Góc Mực**.
@@ -23,15 +23,24 @@ T4 công bố hỗ trợ Kindle Paperwhite 1. Cần kiểm chứng T4 và Stockf
 
 Để đăng nhập và đấu bằng tài khoản Lichess, cài riêng **Ink Knight của Beater Studios**, rồi vào **Góc Mực → Cờ vua → Đấu Lichess · Ink Knight**. Chức năng tài khoản chạy trong Ink Knight. Sảnh T4 dùng tài khoản của T4. [Tải Ink Knight](https://github.com/beater-studios/ink_knight.koplugin/releases/latest)
 
+## Cập nhật qua Wi-Fi
+
+Từ **Góc Mực → Cập nhật → Kiểm tra Góc Mực**, plugin kiểm tra bản phát hành GitHub, xác minh chữ ký rồi hỏi trước khi cài và khởi động lại KOReader. Góc Mực giữ một bản sao trong thư mục `gocmuc-backup-<phiên-bản>-<mã>` cạnh plugin. Dữ liệu cá nhân nằm trong thư mục thiết lập của KOReader.
+
+- **T4 e-reader OS** dùng trình cập nhật của Hoàng Tuấn. Chọn **Góc Mực → Cập nhật → Cập nhật T4**, rồi chọn **Cập nhật T4** trong cài đặt của T4. [Hướng dẫn T4](https://github.com/hoangtuan2k5/t4-e-reader-os-releases)
+- **Ink Knight** có thể cập nhật qua USB với bản phát hành của Beater Studios. [Bản phát hành Ink Knight](https://github.com/beater-studios/ink_knight.koplugin/releases/latest)
+
+Để phát hành OTA, tăng phiên bản trong `_meta.lua`, ký gói bằng `tools/sign-update.mjs` với khóa riêng tương ứng, rồi đính kèm `gocmuc-update.json` vào GitHub Release mới. Khóa ký được lưu ngoài cây mã nguồn.
+
 ## Toán, đọc và tiện ích
 
-| Mục | Tính năng trong bản 0.1.0 |
+| Mục | Tính năng |
 | --- | --- |
 | Toán tư duy | Năm cấp lớp, luyện 10 câu, đề mô phỏng Kangaroo 24 câu và ASMO 25 câu, hẹn giờ, điểm 3–4–5, câu hỏi ngẫu nhiên và lời giải Việt–Anh. Kangaroo trừ ¼ điểm của câu chọn sai. |
 | Cờ caro | Bàn 13 × 13, thắng khi có ít nhất năm quân liên tiếp còn đầu mở, năm mức đối thủ, hai người chung máy, phòng qua Wi-Fi. |
 | Đọc báo | Báo Mới, Tuổi Trẻ, Thanh Niên, VnExpress, Znews và Báo Quốc Tế. Ưu tiên nguồn RSS tòa soạn, dùng Google Tin tức khi cần. Có bản tóm tắt, nút trước/sau và hỗ trợ nút cứng trên thiết bị có phím khi đến rìa trang. Nội dung đầy đủ phụ thuộc vào trang bài viết. |
-| Lịch để bàn | Ngày âm và dương, lịch tháng, giờ hoàng đạo dân gian, thời tiết hiện tại và dự báo bốn ngày, giá vàng SJC. Địa điểm thời tiết mặc định là Đà Nẵng và có thể đổi trong plugin. |
-| Hợp âm | Hai bài tập mẫu và nội dung tự nhập. Ký hiệu như `[Am]` và `[G/B]` cho phép chuyển tông theo nửa cung. |
+| Lịch để bàn | Ngày âm và dương, lịch tháng, giờ hoàng đạo dân gian, thời tiết hiện tại và dự báo bốn ngày, giá vàng SJC. Địa điểm thời tiết mặc định là TP Hồ Chí Minh và có thể đổi trong plugin. |
+| Hợp âm | Hai bài tập mẫu, nội dung tự nhập và nhập từ đường dẫn bài hát công khai trên Hợp Âm Chuẩn. Góc Mực lưu các ký hiệu hợp âm theo từng dòng để xem offline và đổi tông theo nửa cung. |
 | Bé đọc | Bộ mẫu truyện kể lại, ca dao, tục ngữ và câu đố. |
 | 15 tiện ích | Việc cần làm, thói quen, tập trung, từ vựng, Sudoku, ghi chú, bấm giờ, đếm ngược, đổi đơn vị, máy tính, xúc xắc, đồng xu, bốc số, thẻ tự tạo và nước uống. |
 
@@ -57,6 +66,7 @@ Nếu Windows hỏi về mạng, có thể cho phép Node.js qua tường lửa 
 ```sh
 lua tests/core.lua
 lua tests/plugin.lua
+lua tests/ota.lua
 node --test tests/room.test.mjs
 ```
 
@@ -67,5 +77,6 @@ Các bài kiểm tra dùng logic cục bộ, giao diện KOReader mô phỏng v�
 - **Hoàng Tuấn (@hoangtuan2k5)** phát triển T4 e-reader OS, hệ thống cờ vua được mở từ Góc Mực. [T4 e-reader OS](https://github.com/hoangtuan2k5/t4-e-reader-os-releases)
 - **Beater Studios** phát triển Ink Knight, ứng dụng được mở từ mục Lichess. [Ink Knight](https://github.com/beater-studios/ink_knight.koplugin)
 - **Nguyễn Việt An** chia sẻ ý tưởng góc học tập trên Kindle. [Bài viết gốc](https://www.facebook.com/share/p/1CY1kR7tiE/)
+- **Hợp Âm Chuẩn** và những người đóng góp cung cấp các bản hợp âm được nhập theo đường dẫn. [Hợp Âm Chuẩn](https://hopamchuan.com/)
 - **Hồ Ngọc Đức** công bố phương pháp lịch âm Việt Nam dựa trên chu kỳ Mặt Trăng và kinh độ Mặt Trời. [Quy tắc lịch âm](https://www.xemamlich.uhm.vn/calrules.html)
 - Dự báo và giá vàng lần lượt đến từ [Open-Meteo](https://open-meteo.com/) và [Vang.today](https://www.vang.today/vi/api).
