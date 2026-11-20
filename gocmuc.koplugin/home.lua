@@ -5,9 +5,8 @@ local floor=math.floor
 local apps={
     {"Cờ vua","chessMenu","knight"}, {"Toán tư duy","mathMenu","math"},
     {"Cờ caro","caroMenu","caro"}, {"Đọc báo","newsMenu","news"},
-    {"Lịch để bàn","calendar","calendar"}, {"Hợp âm","chordMenu","music"},
-    {"Bé đọc","kidsMenu","book"}, {"Tiện ích","utilities","tools"},
-    {"Tìm hợp âm","chordSearch","search"}, {"Lịch tháng","calendarThisMonth","calendar"},
+    {"Lịch để bàn","calendar","calendar"}, {"Bé đọc","kidsMenu","book"},
+    {"Tiện ích","utilities","tools"}, {"Lịch tháng","calendarThisMonth","calendar"},
     {"Thời tiết","weather","cloud"}, {"Giá vàng","gold","coin"},
     {"Sudoku","sudokuMenu","sudoku"}, {"Việc cần làm","todo","list"},
     {"Thói quen","habits","calendar"}, {"Tập trung","focus","focus"},

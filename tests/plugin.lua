@@ -59,26 +59,11 @@ local package_modules={
     ["ltn12"]={source={string=function(v) return v end}},
     ["socketutil"]={set_timeout=function() end},
     ["socket.http"]={request=function(opts)
-        if opts.url=="https://hopamchuan.com/autocomplete" then
-            assert(opts.method=="POST" and opts.source=="q=Ten%20bai%20thu")
-            assert(opts.headers["content-type"]=="application/x-www-form-urlencoded")
-            opts.sink("song_results")
-        elseif opts.url=="https://hopamchuan.com/song/123/ten-bai-thu" then
-            opts.sink('<h1 id="song-title"><span>Tên bài thử</span></h1>'
-                ..'<div class="chord_lyric_line">Một lời thử <span class="hopamchuan_chord">C#m7</span></div>')
-        else
-            opts.sink("<rss><channel><item><title>A &amp; B</title><link>https://example.com/a</link>"
+        opts.sink("<rss><channel><item><title>A &amp; B</title><link>https://example.com/a</link>"
             .."<description><![CDATA[<p>Some notes</p>]]></description></item></channel></rss>")
-        end
         return 1,200
     end},
-    ["json"]={encode=function() return "{}" end,decode=function(v)
-        if v=="song_results" then
-            return {success=true,data={{_title="Tên bài thử",_singers="Tác giả thử",
-                _url="/song/123/ten-bai-thu",_lyric="Không lấy đoạn này"}}}
-        end
-        return {}
-    end},
+    ["json"]={encode=function() return "{}" end,decode=function() return {} end},
 }
 for name,module in pairs(package_modules) do package.loaded[name]=module end
 
@@ -86,7 +71,7 @@ local App=dofile(root.."/main.lua")
 local app=setmetatable({ui={menu={registerToMainMenu=function() end}}},{__index=App})
 app:init()
 app:home()
-assert(app.window.battery=="Pin 88%" and #app.window.tiles==20)
+assert(app.window.battery=="Pin 88%" and #app.window.tiles==18)
 local seen_x,seen_y={},{}
 for _,tile in ipairs(app.window.tiles) do
     assert(tile.w==tile.h and tile.w>190 and tile.r>0)
@@ -114,7 +99,7 @@ assert(app.window.title=="Cờ vua")
 app:home()
 screen_w,screen_h=1448,1072
 app.window:onSetDimensions()
-assert(#app.window.tiles==20 and app.window.dimen.w==1448)
+assert(#app.window.tiles==18 and app.window.dimen.w==1448)
 for _,tile in ipairs(app.window.tiles) do assert(tile.y+tile.h<screen_h) end
 screen_w,screen_h=1072,1448
 
@@ -123,21 +108,21 @@ app.window:paintTo(bb,0,0)
 assert(labelFor(app.window,"Cờ vua T4\nHoàng Tuấn").bgcolor==app.window.tiles[1].fill)
 local nav=app.window.targets[1]
 app.window:onTileTap(nil,{pos={x=nav.x+nav.w/2,y=nav.y+nav.h/2}})
-assert(#app.window.tiles==20)
+assert(#app.window.tiles==18)
 app:chessMenu()
 app.window.choices[1][2]()
 assert(app.window.text:find("hoangtuan2k5",1,true))
 local tab
 adapter["t4-e-reader-os"]={open=function(_,name) tab=name end}
 app:openT4("chess")
-assert(tab=="chess" and #app.window.tiles==20)
+assert(tab=="chess" and #app.window.tiles==18)
 app:updates()
 app.window.choices[2][2]()
-assert(tab=="settings" and #app.window.tiles==20)
+assert(tab=="settings" and #app.window.tiles==18)
 local opened=false
 adapter.ink_knight={addToMainMenu=function(_,menu) menu.ink_knight={callback=function() opened=true end} end}
 app:openInkKnight()
-assert(opened and #app.window.tiles==20)
+assert(opened and #app.window.tiles==18)
 
 app:kidsLevels()
 app.window.choices[1][2]()
@@ -164,34 +149,9 @@ end
 app.window.buttons[7][7].callback()
 assert(app.window.title:find("X thắng",1,true))
 app.window:onCloseSurface()
-assert(#app.window.tiles==20)
-
-app:chordMenu()
-app.window.choices[4][2]()
-app.window.buttons_table[1][3].callback()
-assert(app.window.text:find("[C#]",1,true))
-assert(app.window.text:find("[C#/F]",1,true))
+assert(#app.window.tiles==18)
 
 local Net=dofile(root.."/net.lua")
-local HAC=dofile(root.."/hopamchuan.lua")
-assert(not HAC.url("https://hopamchuan.com.evil.test/song/12/example"))
-assert(not HAC.url("https://hopamchuan.com/song/12/../../example"))
-assert(HAC.url("https://hopamchuan.com/song/123/test/?fbclid=example")=="https://hopamchuan.com/song/123/test/")
-local page='<h1 id="song-title"><span>Tên bài thử</span></h1>'
-    ..'<div class="chord_lyric_line">Một lời thử <span class="hopamchuan_chord">C#m7</span> '
-    ..'<span class="hopamchuan_chord">D/F#</span></div>'
-local song=assert(HAC.parse(page,Net.clean))
-assert(song.title=="Tên bài thử" and song.body=="[C#m7]  [D/F#]")
-app:chordMenu()
-app.window.choices[1][2]()
-assert(shown.fullscreen)
-shown.buttons[1][3].callback()
-assert(app.window.title=="Kết quả tìm bài hát")
-assert(app.window.choices[2][1]=="Tên bài thử\nTác giả thử")
-app.window.choices[2][2]()
-assert(app.window.text:find("[C#m7]",1,true))
-assert(app.window.covers_fullscreen and not app.window.text:find("Một lời thử",1,true))
-assert(#settings.chords==1 and settings.chords[1].body=="[C#m7]")
 local xml=assert(Net.request("https://example.com/feed"))
 local items=Net.rss(xml)
 assert(#items==1 and items[1].title=="A & B" and items[1].text=="Some notes")
@@ -203,7 +163,7 @@ app.window.choices[2][2]()
 assert(app.window.text:find("Some notes",1,true))
 assert(app.window.covers_fullscreen and app.window.width==screen_w-4)
 app.window.close_callback()
-assert(#app.window.tiles==20)
+assert(#app.window.tiles==18)
 
 app:utilities()
 assert(#app.window.tiles==15 and app.window.page_count==1)
@@ -232,5 +192,5 @@ assert(app.window.title=="Muse" and app.window.covers_fullscreen)
 app.window.choices[3][2]()
 assert(shown.title=="Địa chỉ cầu nối Muse" and shown.fullscreen)
 shown.buttons[1][2].callback()
-assert(#app.window.tiles==20)
-print("KOReader widget mocks: 4 × 5 menus, matched text background, app exits, calendar, news, chord search and Muse passed.")
+assert(#app.window.tiles==18)
+print("KOReader widget mocks: 4 × 5 menus, matched text background, app exits, calendar, news and Muse passed.")

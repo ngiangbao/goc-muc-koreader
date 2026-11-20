@@ -98,7 +98,7 @@ end
 
 local native_icons={
     book="book.opened", news="appbar.pageview", note="edit", muse="appbar.navigation",
-    music="appbar.typeset", search="appbar.search", help="info", update="cre.render.reload",
+    help="info", update="cre.render.reload",
 }
 
 function App:sectionIcon(icon)
@@ -230,7 +230,6 @@ function App:credits()
         .."Cờ vua · T4 e-reader OS do Hoàng Tuấn (@hoangtuan2k5) phát triển. Cảm ơn tác giả đã phát hành T4 cho cộng đồng Kindle.\n"
         .."github.com/hoangtuan2k5/t4-e-reader-os-releases\n\n"
         .."Tùy chọn Lichess: Ink Knight của Beater Studios.\n"
-        .."Hợp âm: nhập ký hiệu theo URL từ Hợp Âm Chuẩn.\n"
         .."Lịch âm: phương pháp thiên văn do Hồ Ngọc Đức công bố.\nDự báo: Open-Meteo. Giá vàng: Vang.today.",
         function() self:home() end)
 end

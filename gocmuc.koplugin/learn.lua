@@ -1,7 +1,5 @@
 return function(App,env)
 local Quiz=dofile(env.root.."/mathquiz.lua")
-local Net=dofile(env.root.."/net.lua")
-local HAC=dofile(env.root.."/hopamchuan.lua")
 local UI=env.UI
 
 function App:mathMenu()
@@ -149,109 +147,5 @@ function App:kidsMenu()
         end}
     end
     self:menu("Bé đọc",choices,function() self:home() end,{icon="book"})
-end
-
-local names={"C","C#","D","D#","E","F","F#","G","G#","A","A#","B"}
-local flat={Db=2,Eb=4,Gb=7,Ab=9,Bb=11,Cb=12,Fb=5}
-local note={}
-for i,n in ipairs(names) do note[n]=i end
-for n,i in pairs(flat) do note[n]=i end
-
-local function transpose(body,steps)
-    return (body:gsub("%[([^%]]+)%]",function(chord)
-        local root,suffix=chord:match("^([A-G][#b]?)(.*)$")
-        local base=note[root]
-        if not base then return "["..chord.."]" end
-        suffix=suffix:gsub("/([A-G][#b]?)",function(bass)
-            return "/"..(note[bass] and names[(note[bass]-1+steps)%12+1] or bass)
-        end)
-        return "["..names[(base-1+steps)%12+1]..suffix.."]"
-    end))
-end
-
-local samples={
-    {title="Bài tập vòng hợp âm C",body="[C]  [G]  [Am]  [F]\nGảy bốn phách mỗi hợp âm.\n\n[C/E]  [F]  [G7]  [C]\nThử thay đổi nốt trầm ở hợp âm đầu."},
-    {title="Bài tập giọng thứ",body="[Am]  [Dm]  [E7]  [Am]\nGảy xen kẽ dây trầm và ba dây cao."},
-}
-
-function App:chordMenu()
-    local choices={{"Tìm bài hát",function() self:chordSearch() end,"search"},{"Thêm bài hợp âm",function()
-        self:prompt("Tên bài",nil,"",function(title)
-            if title=="" then return end
-            self:prompt("Nội dung","Dùng [C], [Am], [G/B] quanh các hợp âm.","",function(body)
-                if body=="" then return end
-                local saved=self:read("chords",{})
-                saved[#saved+1]={title=title,body=body}
-                self:save("chords",saved)
-                self:chordMenu()
-            end,{multiline=true})
-        end)
-    end,"add"},{"Nhập bằng link",function() self:importChords() end,"link"}}
-    for _,list in ipairs({samples,self:read("chords",{})}) do
-        for _,song in ipairs(list) do
-            choices[#choices+1]={song.title,function() self:chordView(song,0) end,"music"}
-        end
-    end
-    self:menu("Hợp âm",choices,function() self:home() end,{icon="music"})
-end
-
-function App:chordSearch(initial)
-    self:prompt("Tìm bài hát","Nhập tên bài hát hoặc ca sĩ. Cần Wi-Fi để tìm trên Hợp Âm Chuẩn.",
-        initial or "",function(query)
-            if #query<2 or #query>150 then self:notice("Nhập tên bài hát hoặc ca sĩ."); return end
-            self:online(function()
-                local response,err=Net.json("https://hopamchuan.com/autocomplete","q="..Net.escape(query))
-                if not response then self:notice(err); return end
-                local results=HAC.searchResults(response,Net.clean)
-                local function show()
-                    local choices={{"Tìm lại",function() self:chordSearch(query) end,"search"}}
-                    for _,song in ipairs(results) do
-                        local label=song.title..(song.artist~="" and "\n"..song.artist or "")
-                        choices[#choices+1]={label,function() self:loadChords(song.url,show) end,"music"}
-                    end
-                    self:menu(#results>0 and "Kết quả tìm bài hát" or "Chưa tìm thấy bài",
-                        choices,function() self:chordMenu() end,{icon="search",subtitle=query})
-                end
-                show()
-            end)
-        end,{action="Tìm bài",icon="search"})
-end
-
-function App:importChords()
-    self:prompt("Nhập từ Hợp Âm Chuẩn",
-        "Dán link bài hát dạng https://hopamchuan.com/song/…. Góc Mực lưu ký hiệu hợp âm theo dòng.",
-        "",function(value)
-            local url=HAC.url(value)
-            if not url then self:notice("Hãy nhập link một bài hát từ hopamchuan.com."); return end
-            self:loadChords(url)
-        end,{action="Nhập hợp âm"})
-end
-
-function App:loadChords(url,back)
-    self:online(function()
-        local html,err=Net.request(url)
-        if not html then self:notice(err); return end
-        local song,message=HAC.parse(html,Net.clean)
-        if not song then self:notice(message); return end
-        song.source=url
-        local saved=self:read("chords",{})
-        local index=#saved+1
-        for i,entry in ipairs(saved) do
-            if entry.source and entry.source:gsub("/$","")==url:gsub("/$","") then index=i; break end
-        end
-        saved[index]=song
-        self:save("chords",saved)
-        self:chordView(song,0,back)
-    end)
-end
-
-function App:chordView(song,steps,back)
-    local body=transpose(song.body,steps)
-    if song.source then body=body.."\n\nNguồn: Hợp Âm Chuẩn\n"..song.source end
-    self:view(song.title.." · "..string.format("%+d",steps),body,back or function() self:chordMenu() end,{
-        rows={{self:button("− Nửa tông",function() self:chordView(song,steps-1,back) end),
-            self:button("Giọng gốc",function() self:chordView(song,0,back) end),
-            self:button("+ Nửa tông",function() self:chordView(song,steps+1,back) end)}},
-    })
 end
 end

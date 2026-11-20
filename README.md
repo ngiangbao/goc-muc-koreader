@@ -42,7 +42,6 @@ Từ **Góc Mực → Cập nhật → Kiểm tra Góc Mực**, plugin kiểm tr
 | Cờ caro | Bàn 13 × 13, thắng khi có ít nhất năm quân liên tiếp còn đầu mở, năm mức đối thủ, hai người chung máy, phòng qua Wi-Fi. |
 | Đọc báo | Sáu ô nguồn báo, danh sách tin và màn đọc toàn màn hình. Ưu tiên nguồn RSS tòa soạn, dùng Google Tin tức khi cần. Có bản tóm tắt, nút trước/sau và hỗ trợ nút cứng trên thiết bị có phím khi đến rìa trang. Nội dung đầy đủ phụ thuộc vào trang bài viết. |
 | Lịch để bàn | Màn xem ngày và xem tháng toàn màn hình, ngày âm dương, giờ hoàng đạo dân gian, thời tiết hiện tại và dự báo bốn ngày, giá vàng SJC. Mặc định thời tiết là TP Hồ Chí Minh. |
-| Hợp âm | Tìm tên bài hoặc ca sĩ trên Hợp Âm Chuẩn qua Wi-Fi. Chọn một kết quả để nhập và lưu ký hiệu hợp âm tự động. Hỗ trợ xem offline, đổi tông và nhập bằng link. |
 | Bé đọc | Bộ mẫu truyện kể lại, ca dao, tục ngữ và câu đố. |
 | 15 tiện ích | Việc cần làm, thói quen, tập trung, từ vựng, Sudoku, ghi chú, bấm giờ, đếm ngược, đổi đơn vị, máy tính, xúc xắc, đồng xu, bốc số, thẻ tự tạo và nước uống. |
 
@@ -96,6 +95,5 @@ Các bài kiểm tra dùng logic cục bộ, giao diện KOReader mô phỏng v�
 - **Hoàng Tuấn (@hoangtuan2k5)** phát triển T4 e-reader OS, hệ thống cờ vua được mở từ Góc Mực. [T4 e-reader OS](https://github.com/hoangtuan2k5/t4-e-reader-os-releases)
 - **Beater Studios** phát triển Ink Knight, ứng dụng được mở từ mục Lichess. [Ink Knight](https://github.com/beater-studios/ink_knight.koplugin)
 - **Nguyễn Việt An** chia sẻ ý tưởng góc học tập trên Kindle. [Bài viết gốc](https://www.facebook.com/share/p/1CY1kR7tiE/)
-- **Hợp Âm Chuẩn** và những người đóng góp cung cấp các bản hợp âm được nhập theo đường dẫn. [Hợp Âm Chuẩn](https://hopamchuan.com/)
 - **Hồ Ngọc Đức** công bố phương pháp lịch âm Việt Nam dựa trên chu kỳ Mặt Trăng và kinh độ Mặt Trời. [Quy tắc lịch âm](https://www.xemamlich.uhm.vn/calrules.html)
 - Dự báo và giá vàng lần lượt đến từ [Open-Meteo](https://open-meteo.com/) và [Vang.today](https://www.vang.today/vi/api).
